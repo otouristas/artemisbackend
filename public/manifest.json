@@ -1,0 +1,16 @@
+{
+  "name": "Artemis Rental Κρατήσεις",
+  "short_name": "Artemis",
+  "description": "Διαχείριση κρατήσεων Artemis Rental Σίφνος",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f4ef",
+  "theme_color": "#0b2a3c",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
