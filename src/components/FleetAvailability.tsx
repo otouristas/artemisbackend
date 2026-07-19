@@ -42,7 +42,7 @@ export function FleetAvailability({ vehicles, bookings }: FleetAvailabilityProps
   }, [vehicles, bookings]);
 
   return (
-    <div className="flex flex-wrap gap-2 mb-3">
+    <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none -mx-3 px-3 scroll-fade-x flex-nowrap">
       {groups.map((g) => {
         const Icon = g.type === "car" ? Car : Bike;
         const allBooked = g.available === 0;
@@ -50,14 +50,14 @@ export function FleetAvailability({ vehicles, bookings }: FleetAvailabilityProps
           <div
             key={g.name}
             className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors",
+              "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium shrink-0 shadow-sm border",
               allBooked
-                ? "bg-destructive/10 border-destructive/20 text-destructive"
-                : "bg-success/10 border-success/20 text-success"
+                ? "bg-destructive/10 border-destructive/20 text-destructive dark:bg-destructive/15"
+                : "bg-[#f7f4ef]/80 dark:bg-card/40 border-border/40 text-foreground"
             )}
           >
-            <Icon className="h-3.5 w-3.5" />
-            <span className="truncate max-w-[100px]">{g.name}</span>
+            <Icon className="h-3.5 w-3.5 opacity-70" />
+            <span className="truncate max-w-[110px]">{g.name}</span>
             <span className={cn(
               "font-bold ml-0.5",
               allBooked ? "text-destructive" : "text-success"

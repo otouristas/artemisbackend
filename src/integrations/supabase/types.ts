@@ -231,6 +231,7 @@ export type Database = {
           notes: string | null
           plate: string | null
           type: Database["public"]["Enums"]["vehicle_type"]
+          quantity: number
         }
         Insert: {
           active?: boolean
@@ -244,6 +245,7 @@ export type Database = {
           notes?: string | null
           plate?: string | null
           type: Database["public"]["Enums"]["vehicle_type"]
+          quantity?: number
         }
         Update: {
           active?: boolean
@@ -257,6 +259,7 @@ export type Database = {
           notes?: string | null
           plate?: string | null
           type?: Database["public"]["Enums"]["vehicle_type"]
+          quantity?: number
         }
         Relationships: []
       }

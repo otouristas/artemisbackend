@@ -22,6 +22,30 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "bg-destructive text-destructive-foreground",
 };
 
+const allocateLanesForVehicle = (vehicle: Vehicle, vehicleBookings: Booking[]) => {
+  const sorted = [...vehicleBookings].sort((a, b) => a.check_in.localeCompare(b.check_in));
+  const quantity = vehicle.quantity ?? 1;
+  const lanes: Booking[][] = Array.from({ length: quantity }, () => []);
+
+  for (const booking of sorted) {
+    let assigned = false;
+    for (let i = 0; i < lanes.length; i++) {
+      const hasOverlap = lanes[i].some(
+        (b) => !(booking.check_out < b.check_in || b.check_out < booking.check_in)
+      );
+      if (!hasOverlap) {
+        lanes[i].push(booking);
+        assigned = true;
+        break;
+      }
+    }
+    if (!assigned) {
+      lanes.push([booking]);
+    }
+  }
+  return lanes;
+};
+
 export function BookingCalendarGrid({
   currentMonth,
   vehicles,
@@ -39,22 +63,7 @@ export function BookingCalendarGrid({
   const [dragBooking, setDragBooking] = useState<{ booking: Booking; dayOffset: number } | null>(null);
   const [dropTarget, setDropTarget] = useState<{ vehicleId: string; day: number } | null>(null);
 
-  const bookingsByVehicle = useMemo(() => {
-    const map: Record<string, Booking[]> = {};
-    for (const v of vehicles) {
-      map[v.id] = bookings.filter((b) => b.vehicle_id === v.id);
-    }
-    return map;
-  }, [vehicles, bookings]);
 
-  const getBookingForCell = (vehicleId: string, day: number): Booking | undefined => {
-    const cellDate = startOfDay(new Date(year, month, day));
-    return bookingsByVehicle[vehicleId]?.find((b) => {
-      const checkIn = startOfDay(parseISO(b.check_in));
-      const checkOut = startOfDay(parseISO(b.check_out));
-      return isWithinInterval(cellDate, { start: checkIn, end: checkOut });
-    });
-  };
 
   const isCheckIn = (booking: Booking, day: number) =>
     isSameDay(parseISO(booking.check_in), new Date(year, month, day));
@@ -150,82 +159,107 @@ export function BookingCalendarGrid({
           </tr>
         </thead>
         <tbody>
-          {vehicles.map((vehicle) => (
-            <tr key={vehicle.id} className="border-b last:border-b-0 hover:bg-muted/20">
-              <td className="px-1.5 sm:px-2 py-1 sm:py-1.5 border-r sticky left-0 bg-card z-10">
-                <div className={cn("font-medium leading-tight truncate", isMobile ? "text-[10px]" : "text-[11px]")}>{vehicle.name}</div>
-                <div className={cn("text-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")}>{vehicle.cc}cc · {vehicle.daily_rate_low}-{vehicle.daily_rate_high}€</div>
-              </td>
-              {days.map((day) => {
-                const booking = getBookingForCell(vehicle.id, day);
-                const date = new Date(year, month, day);
-                const isToday = isSameDay(date, today);
-                const isSunday = date.getDay() === 0;
-                const isDropHere = dropTarget?.vehicleId === vehicle.id && dropTarget?.day === day;
+          {vehicles.flatMap((vehicle) => {
+            const vehicleBookings = bookings.filter((b) => b.vehicle_id === vehicle.id);
+            const lanes = allocateLanesForVehicle(vehicle, vehicleBookings);
 
-                if (booking) {
-                  const isStart = isCheckIn(booking, day);
-                  const isEnd = isCheckOut(booking, day);
-                  return (
-                    <td
-                      key={day}
-                      className={cn(
-                        "border-r cursor-pointer relative",
-                        isToday && "ring-1 ring-inset ring-primary/30",
-                        isSunday && "bg-destructive/5",
-                        isDropHere && "bg-primary/20"
-                      )}
-                      style={{ height: `${cellHeight}px` }}
-                      onClick={() => onBookingClick(booking)}
-                      onDragOver={(e) => handleDragOver(e, vehicle.id, day)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, vehicle.id, day)}
-                      title={`${booking.customer_name} (${booking.status})`}
-                    >
-                      <div
-                        draggable={!isMobile}
-                        onDragStart={(e) => handleDragStart(e, booking, day)}
-                        onDragEnd={handleDragEnd}
-                        className={cn(
-                          "absolute inset-y-0.5 sm:inset-y-1 inset-x-0",
-                          STATUS_COLORS[booking.status],
-                          "opacity-80 hover:opacity-100 transition-opacity",
-                          !isMobile && "cursor-grab active:cursor-grabbing",
-                          isStart && "rounded-l-md ml-0.5",
-                          isEnd && "rounded-r-md mr-0.5"
-                        )}
-                      />
-                      {isStart && (
-                        <span className={cn(
-                          "relative z-10 font-semibold truncate px-0.5 flex items-center justify-center h-full pointer-events-none",
-                          isMobile ? "text-[7px]" : "text-[9px]"
-                        )}>
-                          {booking.customer_name.split(" ")[0]}
-                        </span>
-                      )}
-                    </td>
-                  );
+            return lanes.map((laneBookings, laneIndex) => {
+              const rowId = `${vehicle.id}-lane-${laneIndex}`;
+              let displayName = vehicle.name;
+              if ((vehicle.quantity ?? 1) > 1 || lanes.length > (vehicle.quantity ?? 1)) {
+                if (laneIndex < (vehicle.quantity ?? 1)) {
+                  displayName = `${vehicle.name} #${laneIndex + 1}`;
+                } else {
+                  displayName = `${vehicle.name} (Overbooked)`;
                 }
+              }
 
-                return (
-                  <td
-                    key={day}
-                    className={cn(
-                      "border-r cursor-pointer hover:bg-primary/5 transition-colors",
-                      isToday && "bg-primary/5",
-                      isSunday && "bg-destructive/[0.03]",
-                      isDropHere && "bg-primary/20"
-                    )}
-                    style={{ height: `${cellHeight}px` }}
-                    onClick={() => onCellClick(vehicle.id, date)}
-                    onDragOver={(e) => handleDragOver(e, vehicle.id, day)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, vehicle.id, day)}
-                  />
-                );
-              })}
-            </tr>
-          ))}
+              return (
+                <tr key={rowId} className="border-b last:border-b-0 hover:bg-muted/20">
+                  <td className="px-1.5 sm:px-2 py-1 sm:py-1.5 border-r sticky left-0 bg-card z-10">
+                    <div className={cn("font-medium leading-tight truncate", isMobile ? "text-[10px]" : "text-[11px]")}>
+                      {displayName}
+                    </div>
+                    <div className={cn("text-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")}>
+                      {vehicle.cc}cc · {vehicle.daily_rate_low}-{vehicle.daily_rate_high}€
+                    </div>
+                  </td>
+                  {days.map((day) => {
+                    const date = new Date(year, month, day);
+                    const booking = laneBookings.find((b) => {
+                      const checkIn = startOfDay(parseISO(b.check_in));
+                      const checkOut = startOfDay(parseISO(b.check_out));
+                      return isWithinInterval(startOfDay(date), { start: checkIn, end: checkOut });
+                    });
+                    const isToday = isSameDay(date, today);
+                    const isSunday = date.getDay() === 0;
+                    const isDropHere = dropTarget?.vehicleId === vehicle.id && dropTarget?.day === day;
+
+                    if (booking) {
+                      const isStart = isCheckIn(booking, day);
+                      const isEnd = isCheckOut(booking, day);
+                      return (
+                        <td
+                          key={day}
+                          className={cn(
+                            "border-r cursor-pointer relative",
+                            isToday && "ring-1 ring-inset ring-primary/30",
+                            isSunday && "bg-destructive/5",
+                            isDropHere && "bg-primary/20"
+                          )}
+                          style={{ height: `${cellHeight}px` }}
+                          onClick={() => onBookingClick(booking)}
+                          onDragOver={(e) => handleDragOver(e, vehicle.id, day)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, vehicle.id, day)}
+                          title={`${booking.customer_name} (${booking.status})`}
+                        >
+                          <div
+                            draggable={!isMobile}
+                            onDragStart={(e) => handleDragStart(e, booking, day)}
+                            onDragEnd={handleDragEnd}
+                            className={cn(
+                              "absolute inset-y-0.5 sm:inset-y-1 inset-x-0",
+                              STATUS_COLORS[booking.status],
+                              "opacity-80 hover:opacity-100 transition-opacity",
+                              !isMobile && "cursor-grab active:cursor-grabbing",
+                              isStart && "rounded-l-md ml-0.5",
+                              isEnd && "rounded-r-md mr-0.5"
+                            )}
+                          />
+                          {isStart && (
+                            <span className={cn(
+                              "relative z-10 font-semibold truncate px-0.5 flex items-center justify-center h-full pointer-events-none",
+                              isMobile ? "text-[7px]" : "text-[9px]"
+                            )}>
+                              {booking.customer_name.split(" ")[0]}
+                            </span>
+                          )}
+                        </td>
+                      );
+                    }
+
+                    return (
+                      <td
+                        key={day}
+                        className={cn(
+                          "border-r cursor-pointer hover:bg-primary/5 transition-colors",
+                          isToday && "bg-primary/5",
+                          isSunday && "bg-destructive/[0.03]",
+                          isDropHere && "bg-primary/20"
+                        )}
+                        style={{ height: `${cellHeight}px` }}
+                        onClick={() => onCellClick(vehicle.id, date)}
+                        onDragOver={(e) => handleDragOver(e, vehicle.id, day)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, vehicle.id, day)}
+                      />
+                    );
+                  })}
+                </tr>
+              );
+            });
+          })}
         </tbody>
       </table>
     </div>

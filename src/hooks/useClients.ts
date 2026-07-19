@@ -11,8 +11,9 @@ export function useClients() {
   const qc = useQueryClient();
 
   useEffect(() => {
+    const channelId = `clients-realtime-${Math.random().toString(36).substring(2, 9)}`;
     const channel = supabase
-      .channel("clients-realtime")
+      .channel(channelId)
       .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, () => {
         qc.invalidateQueries({ queryKey: ["clients"] });
       })

@@ -146,56 +146,54 @@ export function BookingListView({
             const days = differenceInDays(parseISO(b.check_out), parseISO(b.check_in));
 
             return (
-              <Card key={b.id} className="overflow-hidden">
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-semibold">{b.customer_name}</div>
-                      <div className="text-sm text-muted-foreground">{vehicleMap[b.vehicle_id]?.name}</div>
-                    </div>
-                    <Badge className={cn("text-xs", STATUS_VARIANT[b.status])}>{STATUS_LABELS[b.status]}</Badge>
+              <div key={b.id} className="rounded-2xl border border-border/30 bg-card/60 backdrop-blur-md p-4 space-y-3 shadow-sm transition-all active:scale-[0.99] duration-150">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-semibold text-sm text-foreground">{b.customer_name}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{vehicleMap[b.vehicle_id]?.name}</div>
                   </div>
-                  <div className="text-sm">
-                    {format(parseISO(b.check_in), "dd MMM", { locale: el })} → {format(parseISO(b.check_out), "dd MMM yyyy", { locale: el })}
-                    <span className="text-muted-foreground ml-1">({days} ημ.)</span>
-                  </div>
-                  {/* Price info */}
-                  {totalPrice > 0 && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <CreditCard className="h-3 w-3 text-muted-foreground" />
-                      <span className="font-medium">{totalPrice}€</span>
-                      {deposit > 0 && <span className="text-muted-foreground text-xs">(Προκ. {deposit}€)</span>}
-                      {remaining > 0 && (
-                        <Badge variant="outline" className="text-[10px] bg-warning/10 text-warning border-warning/30 ml-auto">
-                          Υπόλ. {remaining}€
-                        </Badge>
-                      )}
-                      {remaining <= 0 && totalPrice > 0 && (
-                        <Badge variant="outline" className="text-[10px] bg-success/10 text-success border-success/30 ml-auto">
-                          Εξοφλ. ✓
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  {b.customer_phone && <div className="flex items-center gap-1 text-sm text-muted-foreground"><Phone className="h-3 w-3" />{b.customer_phone}</div>}
-                  {b.customer_email && <div className="flex items-center gap-1 text-sm text-muted-foreground"><Mail className="h-3 w-3" />{b.customer_email}</div>}
-                  {(b as any).delivery_location && <div className="flex items-center gap-1 text-sm text-muted-foreground"><MapPin className="h-3 w-3" />{(b as any).delivery_location}</div>}
-                  {b.comments && <div className="flex items-start gap-1 text-sm text-muted-foreground"><MessageSquare className="h-3 w-3 mt-0.5" />{b.comments}</div>}
-                  {b.payment_notes && <div className="flex items-start gap-1 text-sm text-muted-foreground"><CreditCard className="h-3 w-3 mt-0.5" />{b.payment_notes}</div>}
-                  <div className="flex gap-2 pt-1">
-                    <Button variant="outline" size="sm" onClick={() => onEdit(b)} className="flex-1"><Edit2 className="h-3 w-3 mr-1" />Επεξεργασία</Button>
-                    <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(b)}><Trash2 className="h-3 w-3" /></Button>
-                    {b.customer_phone && (
-                      <Button variant="outline" size="sm" onClick={() => {
-                        const v = vehicleMap[b.vehicle_id];
-                        if (v) window.open(buildWhatsAppUrl({ customerName: b.customer_name, customerPhone: b.customer_phone!, vehicleName: v.name, checkIn: b.check_in, checkOut: b.check_out, deliveryLocation: b.delivery_location || undefined, totalPrice: b.total_price || undefined }), "_blank");
-                      }}>
-                        <MessageCircle className="h-3 w-3 text-green-600" />
-                      </Button>
+                  <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0.5", STATUS_VARIANT[b.status])}>{STATUS_LABELS[b.status]}</Badge>
+                </div>
+                <div className="text-xs text-foreground font-medium">
+                  {format(parseISO(b.check_in), "dd MMM", { locale: el })} → {format(parseISO(b.check_out), "dd MMM yyyy", { locale: el })}
+                  <span className="text-muted-foreground font-normal ml-1">({days} ημ.)</span>
+                </div>
+                {/* Price info */}
+                {totalPrice > 0 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-semibold">{totalPrice}€</span>
+                    {deposit > 0 && <span className="text-muted-foreground text-[10px]">(Προκ. {deposit}€)</span>}
+                    {remaining > 0 && (
+                      <Badge variant="outline" className="text-[9px] bg-warning/10 text-warning border-warning/30 ml-auto">
+                        Υπόλ. {remaining}€
+                      </Badge>
+                    )}
+                    {remaining <= 0 && totalPrice > 0 && (
+                      <Badge variant="outline" className="text-[9px] bg-success/10 text-success border-success/30 ml-auto">
+                        Εξοφλ. ✓
+                      </Badge>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+                )}
+                {b.customer_phone && <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Phone className="h-3.5 w-3.5 shrink-0" />{b.customer_phone}</div>}
+                {b.customer_email && <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Mail className="h-3.5 w-3.5 shrink-0" />{b.customer_email}</div>}
+                {(b as any).delivery_location && <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><MapPin className="h-3.5 w-3.5 shrink-0" />{(b as any).delivery_location}</div>}
+                {b.comments && <div className="flex items-start gap-1.5 text-xs text-muted-foreground"><MessageSquare className="h-3.5 w-3.5 shrink-0 mt-0.5" />{b.comments}</div>}
+                {b.payment_notes && <div className="flex items-start gap-1.5 text-xs text-muted-foreground"><CreditCard className="h-3.5 w-3.5 shrink-0 mt-0.5" />{b.payment_notes}</div>}
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" size="sm" onClick={() => onEdit(b)} className="flex-1 text-xs h-9 rounded-xl"><Edit2 className="h-3.5 w-3.5 mr-1" />Επεξεργασία</Button>
+                  {b.customer_phone && (
+                    <Button variant="outline" size="sm" className="h-9 w-9 p-0 rounded-xl active:bg-green-500/10 active:scale-[0.92] transition-all" onClick={() => {
+                      const v = vehicleMap[b.vehicle_id];
+                      if (v) window.open(buildWhatsAppUrl({ customerName: b.customer_name, customerPhone: b.customer_phone!, vehicleName: v.name, checkIn: b.check_in, checkOut: b.check_out, deliveryLocation: b.delivery_location || undefined, totalPrice: b.total_price || undefined }), "_blank");
+                    }}>
+                      <MessageCircle className="h-4 w-4 text-green-600" />
+                    </Button>
+                  )}
+                  <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(b)} className="h-9 w-9 p-0 rounded-xl active:scale-[0.92] transition-all"><Trash2 className="h-3.5 w-3.5" /></Button>
+                </div>
+              </div>
             );
           })}
         </div>

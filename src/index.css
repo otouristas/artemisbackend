@@ -49,7 +49,7 @@
     --input: 39 18% 82%;
     --ring: 204 64% 20%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --sidebar-background: 204 69% 14%;
     --sidebar-foreground: 38 30% 94%;
@@ -147,6 +147,128 @@
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+
+  /* ── iOS 27 Glass utilities ────────────────────────── */
+
+  .glass-panel {
+    background: hsl(var(--card) / 0.65);
+    backdrop-filter: blur(40px) saturate(1.5);
+    -webkit-backdrop-filter: blur(40px) saturate(1.5);
+    border: 1px solid hsl(var(--border) / 0.35);
+    box-shadow: 0 1px 3px hsl(var(--foreground) / 0.04),
+                0 8px 24px hsl(var(--foreground) / 0.06);
+  }
+
+  .dark .glass-panel {
+    background: hsl(var(--card) / 0.55);
+    border-color: hsl(var(--border) / 0.25);
+    box-shadow: 0 1px 3px hsl(0 0% 0% / 0.12),
+                0 8px 24px hsl(0 0% 0% / 0.18);
+  }
+
+  .glass-nav {
+    background: hsl(var(--background) / 0.6);
+    backdrop-filter: blur(48px) saturate(1.6);
+    -webkit-backdrop-filter: blur(48px) saturate(1.6);
+    border: 1px solid hsl(var(--border) / 0.3);
+    box-shadow: 0 -1px 0 hsl(var(--border) / 0.15),
+                0 4px 16px hsl(var(--foreground) / 0.06);
+  }
+
+  .dark .glass-nav {
+    background: hsl(var(--background) / 0.5);
+    border-color: hsl(var(--border) / 0.2);
+  }
+
+  .glass-header {
+    background: hsl(var(--background) / 0.55);
+    backdrop-filter: blur(48px) saturate(1.5);
+    -webkit-backdrop-filter: blur(48px) saturate(1.5);
+    border-bottom: 1px solid hsl(var(--border) / 0.3);
+  }
+
+  .dark .glass-header {
+    background: hsl(var(--background) / 0.45);
+    border-bottom-color: hsl(var(--border) / 0.2);
+  }
+
+  .glass-chip {
+    background: hsl(var(--card) / 0.5);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid hsl(var(--border) / 0.3);
+  }
+
+  .dark .glass-chip {
+    background: hsl(var(--card) / 0.4);
+    border-color: hsl(var(--border) / 0.2);
+  }
+
+  .glass-chip-active {
+    background: hsl(var(--primary) / 0.12);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid hsl(var(--primary) / 0.25);
+  }
+
+  .dark .glass-chip-active {
+    background: hsl(var(--primary) / 0.15);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* ── Slide animations ──────────────────────────────── */
+
+  @keyframes slide-in-left {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(0); }
+  }
+
+  @keyframes slide-out-left {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-100%); }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes fade-out {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+  }
+
+  .animate-slide-in-left {
+    animation: slide-in-left 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .animate-slide-out-left {
+    animation: slide-out-left 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out;
+  }
+
+  .animate-fade-out {
+    animation: fade-out 0.15s ease-out forwards;
+  }
+
+  /* ── Scroll fade edges ─────────────────────────────── */
+
+  .scroll-fade-x {
+    mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
   }
 }
 

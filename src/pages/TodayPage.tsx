@@ -121,37 +121,39 @@ export default function TodayPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
-          { label: "Αφίξεις", value: arrivals.length, icon: LogIn, tone: "text-success" },
-          { label: "Αναχωρήσεις", value: departures.length, icon: LogOut, tone: "text-accent" },
-          { label: "Εκκρεμείς", value: pending.length, icon: Clock, tone: "text-warning" },
-          { label: "Υπόλοιπα", value: overdueBalances.length, icon: AlertCircle, tone: "text-destructive" },
+          { label: "Αφίξεις", value: arrivals.length, icon: LogIn, tone: "text-success bg-success/10 border-success/20" },
+          { label: "Αναχωρήσεις", value: departures.length, icon: LogOut, tone: "text-accent bg-accent/10 border-accent/20" },
+          { label: "Εκκρεμείς", value: pending.length, icon: Clock, tone: "text-warning bg-warning/10 border-warning/20" },
+          { label: "Υπόλοιπα", value: overdueBalances.length, icon: AlertCircle, tone: "text-destructive bg-destructive/10 border-destructive/20" },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-xl border bg-card px-4 py-3">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <stat.icon className={cn("h-3.5 w-3.5", stat.tone)} />
-              {stat.label}
+          <div key={stat.label} className="rounded-2xl border border-border/30 bg-card/60 backdrop-blur-md px-4 py-3.5 shadow-sm">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
+              <span className={cn("p-1 rounded-lg border", stat.tone)}>
+                <stat.icon className="h-3.5 w-3.5" />
+              </span>
+              <span className="font-medium">{stat.label}</span>
             </div>
-            <p className="font-display text-3xl tracking-tight">{stat.value}</p>
+            <p className="font-display text-3xl font-bold tracking-tight">{stat.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-xl border bg-card p-4 mb-6">
-        <p className="text-xs font-medium text-muted-foreground mb-3">Πληρότητα 7 ημερών</p>
-        <div className="grid grid-cols-7 gap-2">
+      <div className="rounded-2xl border border-border/30 bg-card/60 backdrop-blur-md p-4 mb-6 shadow-sm">
+        <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Πληρότητα 7 ημερών</p>
+        <div className="grid grid-cols-7 gap-3">
           {occupancyDays.map((d) => (
-            <div key={d.day.toISOString()} className="text-center">
-              <p className="text-[10px] text-muted-foreground mb-1 capitalize">
+            <div key={d.day.toISOString()} className="text-center flex flex-col justify-between">
+              <p className="text-[10px] text-muted-foreground mb-1.5 capitalize font-medium">
                 {format(d.day, "EEE", { locale: el })}
               </p>
-              <div className="h-16 rounded-lg bg-muted/60 flex items-end overflow-hidden">
+              <div className="h-20 rounded-lg bg-muted/40 flex items-end overflow-hidden">
                 <div
-                  className="w-full bg-primary/80 transition-all"
+                  className="w-full bg-accent/80 hover:bg-accent transition-all rounded-t-sm"
                   style={{ height: `${Math.max(d.pct, 4)}%` }}
                   title={`${d.booked}/${d.total}`}
                 />
               </div>
-              <p className="text-[10px] mt-1 font-medium">{d.pct}%</p>
+              <p className="text-[10px] mt-1.5 font-semibold">{d.pct}%</p>
             </div>
           ))}
         </div>
@@ -235,23 +237,23 @@ function ActionSection({
         {title}
         <span className="text-muted-foreground font-normal">({items.length})</span>
       </h2>
-      <div className="rounded-xl border bg-card divide-y">
+      <div className="rounded-2xl border border-border/30 bg-card/50 backdrop-blur-md divide-y divide-border/20 overflow-hidden shadow-sm">
         {items.map((b) => {
           const balance = (Number(b.total_price) || 0) - (Number(b.deposit_amount) || 0);
           return (
             <div
               key={b.id}
-              className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer"
+              className="flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 active:bg-muted/60 transition-all cursor-pointer touch-target select-none duration-150 active:scale-[0.99]"
               onClick={() => onOpen(b)}
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm truncate">{b.customer_name}</p>
-                  <Badge variant="outline" className={cn("text-[10px]", STATUS_CHIP[b.status])}>
+                  <p className="font-semibold text-sm truncate text-foreground">{b.customer_name}</p>
+                  <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0.5", STATUS_CHIP[b.status])}>
                     {STATUS_LABELS[b.status]}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground truncate">
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
                   {vehicleMap[b.vehicle_id]?.name}
                   {b.delivery_location ? ` · ${b.delivery_location}` : ""}
                   {showBalance && balance > 0 ? ` · υπόλοιπο ${balance}€` : ""}
@@ -261,7 +263,7 @@ function ActionSection({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="shrink-0 text-success"
+                  className="shrink-0 text-success h-9 w-9 rounded-xl active:bg-success/15 active:scale-[0.92] transition-all"
                   onClick={(e) => {
                     e.stopPropagation();
                     window.open(
@@ -278,7 +280,7 @@ function ActionSection({
                     );
                   }}
                 >
-                  <MessageCircle className="h-4 w-4" />
+                  <MessageCircle className="h-4.5 w-4.5" />
                 </Button>
               )}
             </div>

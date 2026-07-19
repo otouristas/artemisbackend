@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, addMonths, subMonths, parseISO, isToday, isWithinInterval, startOfDay } from "date-fns";
 import { el } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, List } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, List, Car, Bike, LayoutGrid } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,6 +26,7 @@ export default function BookingsPage() {
   const [pipeline, setPipeline] = useState<PipelineFilter>("all");
   const [filterVehicle, setFilterVehicle] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [vehicleTypeFilter, setVehicleTypeFilter] = useState<"all" | "car" | "scooter">("all");
 
   const { data: vehicles = [], isLoading: loadingVehicles } = useVehicles();
   const { data: bookings = [], isLoading: loadingBookings } = useBookings();
@@ -33,6 +34,20 @@ export default function BookingsPage() {
   const deleteBooking = useDeleteBooking();
 
   const today = startOfDay(new Date());
+
+  const filteredVehicles = useMemo(() => {
+    if (vehicleTypeFilter === "all") return vehicles;
+    return vehicles.filter((v) => v.type === vehicleTypeFilter);
+  }, [vehicles, vehicleTypeFilter]);
+
+  const vehicleTypeCounts = useMemo(() => {
+    const counts = { all: vehicles.length, car: 0, scooter: 0 };
+    for (const v of vehicles) {
+      if (v.type === "car") counts.car++;
+      if (v.type === "scooter") counts.scooter++;
+    }
+    return counts;
+  }, [vehicles]);
 
   const pipelineCounts = useMemo(() => {
     const counts = {
@@ -130,7 +145,8 @@ export default function BookingsPage() {
         }
       />
 
-      <div className="flex gap-1.5 overflow-x-auto pb-3 mb-3 scrollbar-thin">
+      {/* Pipeline Booking Status Filters */}
+      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none -mx-3 px-3 scroll-fade-x flex-nowrap">
         {pipelineTabs.map((tab) => (
           <button
             key={tab.key}
@@ -143,16 +159,48 @@ export default function BookingsPage() {
               }
             }}
             className={cn(
-              "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+              "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 active:scale-[0.95]",
               pipeline === tab.key
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-card text-muted-foreground hover:text-foreground",
+                ? "bg-accent text-accent-foreground border-accent shadow-sm"
+                : "bg-card/70 backdrop-blur-md text-muted-foreground border-border/40 hover:text-foreground",
             )}
           >
             {tab.label}
-            <span className="ml-1.5 opacity-70">{pipelineCounts[tab.key]}</span>
+            <span className="ml-1.5 opacity-75 bg-muted-foreground/10 px-1.5 py-0.5 rounded-full text-[10px]">
+              {pipelineCounts[tab.key]}
+            </span>
           </button>
         ))}
+      </div>
+
+      {/* Vehicle Type Filters */}
+      <div className="flex gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-none -mx-3 px-3 scroll-fade-x flex-nowrap">
+        {[
+          { key: "all", label: "Όλα οχήματα", icon: LayoutGrid, count: vehicleTypeCounts.all },
+          { key: "car", label: "Αυτοκίνητα", icon: Car, count: vehicleTypeCounts.car },
+          { key: "scooter", label: "Scooters", icon: Bike, count: vehicleTypeCounts.scooter },
+        ].map((type) => {
+          const Icon = type.icon;
+          const active = vehicleTypeFilter === type.key;
+          return (
+            <button
+              key={type.key}
+              onClick={() => setVehicleTypeFilter(type.key as any)}
+              className={cn(
+                "flex items-center gap-1.5 shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 active:scale-[0.95]",
+                active
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "bg-card/70 backdrop-blur-md text-muted-foreground border-border/40 hover:text-foreground",
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {type.label}
+              <span className="opacity-75 bg-muted-foreground/10 px-1.5 py-0.5 rounded-full text-[10px]">
+                {type.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {(view === "calendar" || !isMobile) && (
@@ -180,13 +228,13 @@ export default function BookingsPage() {
       ) : (
         <>
           {(view === "calendar" || view === "list") && (
-            <FleetAvailability vehicles={vehicles} bookings={filteredBookings} />
+            <FleetAvailability vehicles={filteredVehicles} bookings={filteredBookings} />
           )}
 
           {view === "calendar" && !isMobile ? (
             <BookingCalendarGrid
               currentMonth={currentMonth}
-              vehicles={vehicles}
+              vehicles={filteredVehicles}
               bookings={filteredBookings}
               onBookingClick={(b: Booking) => navigate(`/booking/${b.id}`)}
               onCellClick={(vehicleId, date) => {
@@ -200,7 +248,7 @@ export default function BookingsPage() {
           ) : (
             <BookingListView
               bookings={filteredBookings}
-              vehicles={vehicles}
+              vehicles={filteredVehicles}
               onEdit={(b) => navigate(`/booking/${b.id}`)}
               onDelete={handleDelete}
               filterVehicle={filterVehicle}

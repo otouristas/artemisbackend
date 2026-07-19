@@ -9,8 +9,9 @@ export function useVehicles() {
   const qc = useQueryClient();
 
   useEffect(() => {
+    const channelId = `vehicles-realtime-${Math.random().toString(36).substring(2, 9)}`;
     const channel = supabase
-      .channel("vehicles-realtime")
+      .channel(channelId)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "vehicles" },

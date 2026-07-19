@@ -45,10 +45,6 @@ export default function LoginPage() {
             alt="Artemis Rental"
             className="h-14 mx-auto object-contain brightness-0 invert"
           />
-          <div>
-            <h1 className="font-display text-4xl text-[#f7f4ef] tracking-tight">Artemis</h1>
-            <p className="text-sm text-[#f7f4ef]/70 mt-1">CRM κρατήσεων · Σίφνος</p>
-          </div>
         </div>
 
         <form
