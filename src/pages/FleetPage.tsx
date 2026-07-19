@@ -105,10 +105,8 @@ export default function FleetPage() {
     const v = vehicles.find((x) => x.id === id);
     if (v) {
       const qty = v.quantity ?? 1;
-      // Initialise per-unit plates: prefer plates[], fall back to legacy plate field
-      const existing: string[] = v.plates && v.plates.length > 0
-        ? v.plates
-        : v.plate ? [v.plate] : [];
+      // Parse comma-separated plates from the plate field
+      const existing = (v.plate ?? "").split(",").map((s) => s.trim()).filter(Boolean);
       const padded = Array.from({ length: qty }, (_, i) => existing[i] ?? "");
       setPlates(padded);
       setNotes(v.notes ?? "");
@@ -119,12 +117,11 @@ export default function FleetPage() {
   const saveVehicle = async () => {
     if (!selected) return;
     try {
-      const cleanPlates = plates.map((p) => p.trim());
+      // Store all plates comma-separated in the existing plate TEXT field
+      const nonEmpty = plates.map((p) => p.trim()).filter(Boolean);
       await updateVehicle.mutateAsync({
         id: selected.id,
-        // keep legacy plate as first plate for backwards compat
-        plate: cleanPlates[0] || null,
-        plates: cleanPlates.some(Boolean) ? cleanPlates : null,
+        plate: nonEmpty.join(", ") || null,
         notes: notes || null,
         quantity: quantity,
       });
@@ -366,12 +363,7 @@ export default function FleetPage() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">
                       {v.cc}cc · {v.daily_rate_low}–{v.daily_rate_high}€/ημ.
-                      {(() => {
-                        const allPlates = v.plates && v.plates.some(Boolean)
-                          ? v.plates.filter(Boolean)
-                          : v.plate ? [v.plate] : [];
-                        return allPlates.length > 0 ? ` · ${allPlates.join(", ")}` : "";
-                      })()}
+                      {v.plate ? ` · ${v.plate}` : ""}
                       {(v.quantity ?? 1) > 1 ? ` · x${v.quantity}` : ""}
                     </p>
                   </div>

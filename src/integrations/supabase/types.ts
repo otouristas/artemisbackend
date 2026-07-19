@@ -260,7 +260,6 @@ export type Database = {
           name?: string
           notes?: string | null
           plate?: string | null
-          plates?: string[] | null
           type?: Database["public"]["Enums"]["vehicle_type"]
           quantity?: number
         }
