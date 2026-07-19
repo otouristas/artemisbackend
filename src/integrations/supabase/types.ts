@@ -27,8 +27,10 @@ export type Database = {
           customer_phone: string | null
           delivery_location: string | null
           deposit_amount: number | null
+          extra_fees_json: string | null
           id: string
           id_document: string | null
+          payment_method: string | null
           payment_notes: string | null
           plate: string | null
           status: Database["public"]["Enums"]["booking_status"]
@@ -48,8 +50,10 @@ export type Database = {
           customer_phone?: string | null
           delivery_location?: string | null
           deposit_amount?: number | null
+          extra_fees_json?: string | null
           id?: string
           id_document?: string | null
+          payment_method?: string | null
           payment_notes?: string | null
           plate?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
@@ -69,8 +73,10 @@ export type Database = {
           customer_phone?: string | null
           delivery_location?: string | null
           deposit_amount?: number | null
+          extra_fees_json?: string | null
           id?: string
           id_document?: string | null
+          payment_method?: string | null
           payment_notes?: string | null
           plate?: string | null
           status?: Database["public"]["Enums"]["booking_status"]

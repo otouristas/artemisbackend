@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { format, differenceInDays, parseISO, isBefore, isAfter } from "date-fns";
 import { el } from "date-fns/locale";
-import { CalendarIcon, MessageCircle, Sparkles, Loader2, AlertTriangle, ArrowLeft } from "lucide-react";
+import { CalendarIcon, MessageCircle, Sparkles, Loader2, AlertTriangle, ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { calculateSeasonalPrice } from "@/lib/seasonRates";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -81,6 +82,13 @@ export default function BookingFormPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<{ suggested_total: number; daily_rate: number; explanation: string } | null>(null);
 
+  // Rates, extras, and payment method state
+  const [paymentMethod, setPaymentMethod] = useState<string>("cash");
+  const [extraFees, setExtraFees] = useState<{ id: string; label: string; amount: number }[]>([]);
+  const [newFeeLabel, setNewFeeLabel] = useState("");
+  const [newFeeAmount, setNewFeeAmount] = useState("");
+  const [isManualPrice, setIsManualPrice] = useState(false);
+
   // Conflict detection state
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [pendingSubmitData, setPendingSubmitData] = useState<any>(null);
@@ -110,10 +118,17 @@ export default function BookingFormPage() {
       setPaymentNotes(editBooking.payment_notes || "");
       setStatus(editBooking.status);
       setDeliveryLocation(editBooking.delivery_location || "");
-      setDepositAmount(String(editBooking.deposit_amount || ""));
+      setDepositAmount("0");
       setTotalPrice(String(editBooking.total_price || ""));
       setIdDocument(editBooking.id_document || "");
       setBookingSource(editBooking.booking_source || "phone");
+      setPaymentMethod(editBooking.payment_method || "cash");
+      try {
+        setExtraFees(editBooking.extra_fees_json ? JSON.parse(editBooking.extra_fees_json) : []);
+      } catch (e) {
+        setExtraFees([]);
+      }
+      setIsManualPrice(true);
     } else {
       const fromClient = defaultClientId
         ? clients.find((c) => c.id === defaultClientId)
@@ -130,11 +145,14 @@ export default function BookingFormPage() {
       setPaymentNotes("");
       setStatus("pending");
       setDeliveryLocation("");
-      setDepositAmount("");
+      setDepositAmount("0");
       setTotalPrice("");
       setIdDocument(fromClient?.id_document ?? "");
       setBookingSource("phone");
       setIsDuplicate(false);
+      setPaymentMethod("cash");
+      setExtraFees([]);
+      setIsManualPrice(false);
     }
     setIsInitialized(true);
   }, [editBooking, defaultVehicleId, defaultClientId, defaultDate, isLoading, isInitialized, clients]);
@@ -213,10 +231,12 @@ export default function BookingFormPage() {
       payment_notes: paymentNotes || null,
       status,
       delivery_location: deliveryLocation || null,
-      deposit_amount: depositAmount ? Number(depositAmount) : 0,
+      deposit_amount: 0,
       total_price: totalPrice ? Number(totalPrice) : 0,
       id_document: idDocument || null,
       booking_source: bookingSource,
+      payment_method: paymentMethod || "cash",
+      extra_fees_json: extraFees.length > 0 ? JSON.stringify(extraFees) : null,
     };
   };
 
@@ -338,9 +358,24 @@ export default function BookingFormPage() {
   };
 
   const daysCount = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
+
+  // Auto-calculation of seasonal rates
+  const priceBreakdown = useMemo(() => {
+    if (!selectedVehicle || !checkIn || !checkOut) return null;
+    return calculateSeasonalPrice(selectedVehicle.name, checkIn, checkOut);
+  }, [selectedVehicle, checkIn, checkOut]);
+
+  const baseTotal = priceBreakdown?.available ? priceBreakdown.baseTotal : 0;
+  const feesTotal = extraFees.reduce((sum, f) => sum + f.amount, 0);
+  const autoCalculatedTotal = baseTotal + feesTotal;
+
+  useEffect(() => {
+    if (!isManualPrice && autoCalculatedTotal > 0) {
+      setTotalPrice(String(autoCalculatedTotal));
+    }
+  }, [autoCalculatedTotal, isManualPrice]);
+
   const totalPriceNum = totalPrice ? Number(totalPrice) : 0;
-  const depositNum = depositAmount ? Number(depositAmount) : 0;
-  const remainingBalance = totalPriceNum - depositNum;
 
   const conflictDialog = (
     <AlertDialog open={showConflictDialog} onOpenChange={setShowConflictDialog}>
@@ -637,6 +672,79 @@ export default function BookingFormPage() {
                 </div>
               </div>
 
+              {/* Extra Fees Card */}
+              <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
+                <h2 className="font-display text-lg">Πρόσθετες Χρεώσεις (Extra Fees)</h2>
+                {extraFees.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Δεν έχουν προστεθεί επιπλέον χρεώσεις.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {extraFees.map((fee) => (
+                      <div key={fee.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/40 text-sm">
+                        <span className="font-medium text-muted-foreground">{fee.label}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-foreground">+{fee.amount}€</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:bg-destructive/10 animate-in fade-in"
+                            onClick={() => setExtraFees((prev) => prev.filter((f) => f.id !== fee.id))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Περιγραφή</Label>
+                    <Input
+                      value={newFeeLabel}
+                      onChange={(e) => setNewFeeLabel(e.target.value)}
+                      placeholder="π.χ. Πρόσθετο κάθισμα, Απόσταση..."
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="flex gap-2 items-end">
+                    <div className="space-y-1 flex-1">
+                      <Label className="text-[11px] text-muted-foreground">Ποσό (€)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={newFeeAmount}
+                        onChange={(e) => setNewFeeAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        if (!newFeeLabel.trim() || !newFeeAmount) return;
+                        setExtraFees((prev) => [
+                          ...prev,
+                          {
+                            id: Math.random().toString(36).substring(2, 9),
+                            label: newFeeLabel.trim(),
+                            amount: Number(newFeeAmount) || 0,
+                          },
+                        ]);
+                        setNewFeeLabel("");
+                        setNewFeeAmount("");
+                      }}
+                      className="h-8 px-3 text-xs bg-primary text-primary-foreground"
+                    >
+                      <Plus className="h-3 w-3 mr-1" /> Προσθήκη
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
               {/* Checklist - only for existing bookings */}
               {editBooking && !isDuplicate && (
                 <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
@@ -667,7 +775,18 @@ export default function BookingFormPage() {
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Συνολικό ποσό (€)</Label>
                   <div className="flex gap-1.5">
-                    <Input type="number" min="0" step="0.01" value={totalPrice} onChange={(e) => setTotalPrice(e.target.value)} placeholder="0" className="text-lg font-semibold" />
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={totalPrice}
+                      onChange={(e) => {
+                        setTotalPrice(e.target.value);
+                        setIsManualPrice(true);
+                      }}
+                      placeholder="0"
+                      className="text-lg font-semibold"
+                    />
                     <Button
                       type="button"
                       variant="outline"
@@ -680,6 +799,20 @@ export default function BookingFormPage() {
                       {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
                     </Button>
                   </div>
+
+                  {isManualPrice && autoCalculatedTotal > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsManualPrice(false);
+                        setTotalPrice(String(autoCalculatedTotal));
+                        toast.success("Επαναφορά στην αυτόματη τιμή!");
+                      }}
+                      className="text-[11px] text-primary hover:underline block text-left font-medium"
+                    >
+                      Επαναφορά στην αυτόματη τιμή ({autoCalculatedTotal}€)
+                    </button>
+                  )}
 
                   {aiSuggestion && (
                     <div className="rounded-lg border bg-primary/5 p-3.5 space-y-1.5 transition-all animate-in fade-in slide-in-from-top-1">
@@ -697,6 +830,7 @@ export default function BookingFormPage() {
                           className="h-6 text-xs hover:bg-primary/10 hover:text-primary"
                           onClick={() => {
                             setTotalPrice(String(aiSuggestion.suggested_total));
+                            setIsManualPrice(true);
                             setAiSuggestion(null);
                             toast.success("Τιμή AI εφαρμόστηκε!");
                           }}
@@ -710,29 +844,59 @@ export default function BookingFormPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium">Προκαταβολή (€)</Label>
-                  <Input type="number" min="0" step="0.01" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="0" />
+                  <Label className="text-xs font-medium">Τρόπος Πληρωμής</Label>
+                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Μετρητά (Cash)</SelectItem>
+                      <SelectItem value="bank">Τραπεζική Κατάθεση (Bank Transfer)</SelectItem>
+                      <SelectItem value="iris">IRIS</SelectItem>
+                      <SelectItem value="card">Κάρτα (Card)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                {/* Remaining balance badge */}
-                {totalPriceNum > 0 && (
-                  <div className="flex items-center justify-between text-xs border-t pt-3">
-                    <span className="text-muted-foreground">Υπόλοιπο:</span>
-                    <span className={cn(
-                      "font-bold px-2.5 py-1 rounded-md text-sm",
-                      remainingBalance > 0
-                        ? "bg-warning/10 text-warning border border-warning/20"
-                        : "bg-success/10 text-success border border-success/20"
-                    )}>
-                      {remainingBalance > 0 ? `${remainingBalance}€` : "Εξοφλημένο"}
-                    </span>
-                  </div>
-                )}
 
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Σημειώσεις πληρωμής</Label>
                   <Input value={paymentNotes} onChange={(e) => setPaymentNotes(e.target.value)} placeholder="π.χ. Πληρώθηκε μετρητά" />
                 </div>
+
+                {priceBreakdown && (
+                  <div className="rounded-lg border bg-muted/40 p-3.5 space-y-2 text-xs animate-in fade-in">
+                    <p className="font-semibold text-muted-foreground uppercase tracking-wider text-[10px]">Ανάλυση Τιμής ({daysCount} ημ.)</p>
+                    {priceBreakdown.available ? (
+                      <>
+                        <div className="space-y-1.5 border-b pb-2">
+                          {priceBreakdown.segments.map((seg, idx) => (
+                            <div key={idx} className="flex justify-between text-muted-foreground">
+                              <span>{seg.label} ({seg.days} × {seg.rate}€)</span>
+                              <span className="font-medium text-foreground">{seg.subtotal}€</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between font-medium">
+                          <span>Βασική τιμή:</span>
+                          <span>{baseTotal}€</span>
+                        </div>
+                        {extraFees.length > 0 && (
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>Πρόσθετες χρεώσεις:</span>
+                            <span>+{feesTotal}€</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-bold border-t pt-2 text-sm text-primary">
+                          <span>Υπολογισμένη τιμή:</span>
+                          <span>{autoCalculatedTotal}€</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="rounded-md bg-destructive/10 border border-destructive/20 p-2.5 text-destructive font-medium leading-relaxed">
+                        Οι τιμές για Scooters ισχύουν μόνο για τη μεσαία & peak σεζόν (11 Ιουν – 10 Σεπ). 
+                        Εκτός αυτών των ημερομηνιών, επικοινωνήστε μαζί μας για διαθεσιμότητα.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Utility actions card */}
