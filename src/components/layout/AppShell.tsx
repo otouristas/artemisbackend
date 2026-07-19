@@ -10,6 +10,8 @@ import {
   Plus,
   Menu,
   X,
+  Bell,
+  BellOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +20,7 @@ import logoImg from "@/assets/logo.svg";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommandPalette } from "@/components/CommandPalette";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 const navItems = [
   { to: "/", label: "Σήμερα", icon: LayoutDashboard, end: true },
@@ -33,6 +36,44 @@ export function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
+
+  useEffect(() => {
+    if ("Notification" in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  const requestNotificationPermission = async () => {
+    if (!("Notification" in window)) {
+      toast.error("Οι ειδοποιήσεις δεν υποστηρίζονται από αυτή τη συσκευή/πρόγραμμα.");
+      return;
+    }
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      if (permission === "granted") {
+        toast.success("Ενεργοποιήθηκαν οι ειδοποιήσεις!");
+        if ("serviceWorker" in navigator) {
+          const reg = await navigator.serviceWorker.ready;
+          reg.showNotification("Artemis Rental", {
+            body: "Οι ειδοποιήσεις σας είναι ενεργές!",
+            icon: "/apple-touch-icon.png",
+            badge: "/apple-touch-icon.png"
+          });
+        } else {
+          new Notification("Artemis Rental", {
+            body: "Οι ειδοποιήσεις σας είναι ενεργές!",
+            icon: "/apple-touch-icon.png"
+          });
+        }
+      } else if (permission === "denied") {
+        toast.error("Αποκλείστηκε η πρόσβαση στις ειδοποιήσεις. Ενεργοποιήστε τις από τις ρυθμίσεις της συσκευής σας.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Close sidebar on location change
   useEffect(() => {
@@ -92,7 +133,27 @@ export function AppShell() {
             Νέα κράτηση
           </Button>
           <div className="flex items-center justify-between px-1">
-            <ThemeToggle />
+            <div className="flex items-center gap-0.5">
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-9 w-9 rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all active:scale-[0.97]",
+                  notificationPermission === "default" && "text-amber-500"
+                )}
+                onClick={requestNotificationPermission}
+                title="Ειδοποιήσεις"
+              >
+                {notificationPermission === "granted" ? (
+                  <Bell className="h-4 w-4 text-emerald-500 fill-emerald-500/10" />
+                ) : notificationPermission === "denied" ? (
+                  <BellOff className="h-4 w-4 text-destructive" />
+                ) : (
+                  <Bell className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -170,7 +231,27 @@ export function AppShell() {
                 Νέα κράτηση
               </Button>
               <div className="flex items-center justify-between px-1 pt-1">
-                <ThemeToggle />
+                <div className="flex items-center gap-0.5">
+                  <ThemeToggle />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "h-9 w-9 rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all active:scale-[0.97]",
+                      notificationPermission === "default" && "text-amber-500"
+                    )}
+                    onClick={requestNotificationPermission}
+                    title="Ειδοποιήσεις"
+                  >
+                    {notificationPermission === "granted" ? (
+                      <Bell className="h-4 w-4 text-emerald-500 fill-emerald-500/10" />
+                    ) : notificationPermission === "denied" ? (
+                      <BellOff className="h-4 w-4 text-destructive" />
+                    ) : (
+                      <Bell className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -202,7 +283,26 @@ export function AppShell() {
             <img src={logoImg} alt="Artemis" className="h-7 w-auto" />
             <span className="font-display text-base font-semibold tracking-tight">Artemis</span>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-9 w-9 rounded-full text-foreground active:bg-muted",
+                notificationPermission === "default" && "text-amber-500"
+              )}
+              onClick={requestNotificationPermission}
+            >
+              {notificationPermission === "granted" ? (
+                <Bell className="h-4.5 w-4.5 text-emerald-500 fill-emerald-500/10" strokeWidth={2} />
+              ) : notificationPermission === "denied" ? (
+                <BellOff className="h-4.5 w-4.5 text-destructive" strokeWidth={2} />
+              ) : (
+                <Bell className="h-4.5 w-4.5" strokeWidth={2} />
+              )}
+            </Button>
+            <ThemeToggle />
+          </div>
         </header>
 
         <main className="flex-1 page-enter">
