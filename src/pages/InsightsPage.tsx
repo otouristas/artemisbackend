@@ -182,7 +182,7 @@ export default function InsightsPage() {
       </div>
 
       {monthBookings.length === 0 ? (
-        <div className="rounded-xl border bg-card px-6 py-12 text-center">
+        <div className="rounded-2xl border bg-card px-6 py-12 text-center">
           <p className="font-display text-xl mb-2">Χωρίς δεδομένα αυτόν τον μήνα</p>
           <p className="text-sm text-muted-foreground">
             Προσθέστε κρατήσεις για να δείτε κατανομή οχημάτων και πηγές.
@@ -190,7 +190,7 @@ export default function InsightsPage() {
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
-          <div className="rounded-xl border bg-card p-4">
+          <div className="rounded-2xl border bg-card p-4">
             <h2 className="font-display text-lg mb-3">Οχήματα</h2>
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
@@ -213,7 +213,7 @@ export default function InsightsPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border bg-card p-4">
+          <div className="rounded-2xl border bg-card p-4">
             <h2 className="font-display text-lg mb-3">Πηγές</h2>
             {sourceData.length === 0 ? (
               <p className="text-sm text-muted-foreground py-16 text-center">Δεν υπάρχουν δεδομένα πηγών.</p>
@@ -248,7 +248,7 @@ function Kpi({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border bg-card px-4 py-4">
+    <div className="rounded-2xl border bg-card px-4 py-4">
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
         <Icon className="h-3.5 w-3.5" />
         {label}

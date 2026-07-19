@@ -23,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -415,24 +416,15 @@ export default function BookingFormPage() {
   );
 
   const deleteDialog = (
-    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Διαγραφή κράτησης</AlertDialogTitle>
-          <AlertDialogDescription>
-            Είστε σίγουροι ότι θέλετε να διαγράψετε την κράτηση του{" "}
-            <strong>{editBooking?.customer_name}</strong>
-            {selectedVehicle ? ` (${selectedVehicle.name})` : ""}; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            Διαγραφή
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmSheet
+      open={showDeleteDialog}
+      onOpenChange={setShowDeleteDialog}
+      title="Διαγραφή κράτησης"
+      description={`Είστε σίγουροι ότι θέλετε να διαγράψετε την κράτηση του ${editBooking?.customer_name ?? ""}${
+        selectedVehicle ? ` (${selectedVehicle.name})` : ""
+      }; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.`}
+      onConfirm={handleDeleteConfirm}
+    />
   );
 
   if (isLoading) {

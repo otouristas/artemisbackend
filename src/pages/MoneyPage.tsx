@@ -122,7 +122,7 @@ export default function MoneyPage() {
               Ανοιχτά υπόλοιπα ({openBalances.length})
             </h2>
             {openBalances.length === 0 ? (
-              <div className="rounded-xl border bg-card px-6 py-10 text-center">
+              <div className="rounded-2xl border bg-card px-6 py-10 text-center">
                 <p className="font-display text-xl mb-1">Όλα εξοφλημένα</p>
                 <p className="text-sm text-muted-foreground">Δεν υπάρχουν ανοιχτά υπόλοιπα.</p>
               </div>
@@ -152,7 +152,7 @@ function Kpi({
   tone: string;
 }) {
   return (
-    <div className="rounded-xl border bg-card px-4 py-4">
+    <div className="rounded-2xl border bg-card px-4 py-4">
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
         <Icon className={cn("h-3.5 w-3.5", tone)} />
         {label}
@@ -181,12 +181,12 @@ function BalanceList({
   onOpen: (id: string) => void;
 }) {
   return (
-    <div className="rounded-xl border bg-card divide-y">
+    <div className="inset-group border">
       {items.map((b) => (
         <button
           key={b.id}
           onClick={() => onOpen(b.id)}
-          className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+          className="pressable w-full text-left flex items-center gap-3 px-4 py-3 min-h-[56px] hover:bg-muted/40 transition-colors"
         >
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm truncate">{b.customer_name}</p>

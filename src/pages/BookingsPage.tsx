@@ -13,6 +13,7 @@ import { useBookings, useUpdateBooking, useDeleteBooking, type Booking, type Boo
 import { BookingCalendarGrid } from "@/components/BookingCalendarGrid";
 import { BookingListView } from "@/components/BookingListView";
 import { FleetAvailability } from "@/components/FleetAvailability";
+import { MobileAgendaView } from "@/components/MobileAgendaView";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -126,12 +127,12 @@ export default function BookingsPage() {
         actions={
           <>
             <Tabs value={view} onValueChange={(v) => setView(v as "calendar" | "list")} className="hidden sm:block">
-              <TabsList>
-                <TabsTrigger value="calendar" className="gap-1.5">
+              <TabsList className="segmented">
+                <TabsTrigger value="calendar" className="segmented-item gap-1.5">
                   <CalendarDays className="h-4 w-4" />
                   Ημερολόγιο
                 </TabsTrigger>
-                <TabsTrigger value="list" className="gap-1.5">
+                <TabsTrigger value="list" className="segmented-item gap-1.5">
                   <List className="h-4 w-4" />
                   Λίστα
                 </TabsTrigger>
@@ -159,10 +160,10 @@ export default function BookingsPage() {
               }
             }}
             className={cn(
-              "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 active:scale-[0.95]",
+              "pressable shrink-0 rounded-full px-3.5 py-1.5 min-h-9 coarse:min-h-10 coarse:px-4 text-xs font-semibold transition-colors duration-200",
               pipeline === tab.key
-                ? "bg-accent text-accent-foreground border-accent shadow-sm"
-                : "bg-card/70 backdrop-blur-md text-muted-foreground border-border/40 hover:text-foreground",
+                ? "glass-chip-active text-primary"
+                : "glass-chip text-muted-foreground hover:text-foreground",
             )}
           >
             {tab.label}
@@ -187,10 +188,10 @@ export default function BookingsPage() {
               key={type.key}
               onClick={() => setVehicleTypeFilter(type.key as any)}
               className={cn(
-                "flex items-center gap-1.5 shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 active:scale-[0.95]",
+                "pressable flex items-center gap-1.5 shrink-0 rounded-full px-3.5 py-1.5 min-h-9 coarse:min-h-10 coarse:px-4 text-xs font-semibold transition-colors duration-200",
                 active
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : "bg-card/70 backdrop-blur-md text-muted-foreground border-border/40 hover:text-foreground",
+                  ? "glass-chip-active text-primary"
+                  : "glass-chip text-muted-foreground hover:text-foreground",
               )}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -202,6 +203,22 @@ export default function BookingsPage() {
           );
         })}
       </div>
+
+      {/* Mobile view toggle: list vs day-by-day agenda */}
+      {isMobile && (
+        <Tabs value={view} onValueChange={(v) => setView(v as "calendar" | "list")} className="mb-3 sm:hidden">
+          <TabsList className="segmented grid w-full grid-cols-2">
+            <TabsTrigger value="list" className="segmented-item gap-1.5">
+              <List className="h-4 w-4" />
+              Λίστα
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="segmented-item gap-1.5">
+              <CalendarDays className="h-4 w-4" />
+              Ημέρες
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
 
       {(view === "calendar" || !isMobile) && (
         <div className="flex items-center gap-1 mb-3">
@@ -231,7 +248,14 @@ export default function BookingsPage() {
             <FleetAvailability vehicles={filteredVehicles} bookings={filteredBookings} />
           )}
 
-          {view === "calendar" && !isMobile ? (
+          {view === "calendar" && isMobile ? (
+            <MobileAgendaView
+              currentMonth={currentMonth}
+              bookings={filteredBookings}
+              vehicles={filteredVehicles}
+              onBookingClick={(b: Booking) => navigate(`/booking/${b.id}`)}
+            />
+          ) : view === "calendar" && !isMobile ? (
             <BookingCalendarGrid
               currentMonth={currentMonth}
               vehicles={filteredVehicles}
@@ -256,20 +280,6 @@ export default function BookingsPage() {
               filterStatus={filterStatus}
               onFilterStatusChange={setFilterStatus}
             />
-          )}
-
-          {isMobile && (
-            <div className="fixed bottom-24 right-4 z-40 sm:hidden">
-              <Button
-                size="sm"
-                variant="outline"
-                className="bg-card shadow"
-                onClick={() => setView(view === "list" ? "calendar" : "list")}
-              >
-                {view === "list" ? <CalendarDays className="h-4 w-4 mr-1" /> : <List className="h-4 w-4 mr-1" />}
-                {view === "list" ? "Ημερολόγιο" : "Λίστα"}
-              </Button>
-            </div>
           )}
         </>
       )}
