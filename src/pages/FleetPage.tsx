@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useBookings } from "@/hooks/useBookings";
 import { useUpdateVehicle } from "@/hooks/useUpdateVehicle";
+import { useCreateVehicle } from "@/hooks/useCreateVehicle";
 import {
   useCreateVehicleBlock,
   useDeleteVehicleBlock,
@@ -41,10 +42,20 @@ export default function FleetPage() {
   const { data: bookings = [] } = useBookings();
   const { data: blocks = [] } = useVehicleBlocks();
   const updateVehicle = useUpdateVehicle();
+  const createVehicle = useCreateVehicle();
   const createBlock = useCreateVehicleBlock();
   const deleteBlock = useDeleteVehicleBlock();
 
   const [selectedId, setSelectedId] = useState<string | null>(selectedFromUrl);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState<"car" | "scooter">("car");
+  const [newCc, setNewCc] = useState("");
+  const [newRateLow, setNewRateLow] = useState("");
+  const [newRateHigh, setNewRateHigh] = useState("");
+  const [newQuantity, setNewQuantity] = useState<number>(1);
+  const [newPlates, setNewPlates] = useState<string[]>([""]);
+  const [newNotes, setNewNotes] = useState("");
   const [plates, setPlates] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
@@ -111,6 +122,45 @@ export default function FleetPage() {
       setPlates(padded);
       setNotes(v.notes ?? "");
       setQuantity(v.quantity ?? 1);
+    }
+  };
+
+  const resetAddForm = () => {
+    setNewName("");
+    setNewType("car");
+    setNewCc("");
+    setNewRateLow("");
+    setNewRateHigh("");
+    setNewQuantity(1);
+    setNewPlates([""]);
+    setNewNotes("");
+  };
+
+  const addVehicle = async () => {
+    const cc = parseInt(newCc);
+    const rateLow = parseFloat(newRateLow);
+    const rateHigh = parseFloat(newRateHigh);
+    if (!newName.trim() || !cc || isNaN(rateLow) || isNaN(rateHigh)) {
+      toast.error("Συμπληρώστε όνομα, cc και τιμές");
+      return;
+    }
+    try {
+      const nonEmpty = newPlates.map((p) => p.trim()).filter(Boolean);
+      await createVehicle.mutateAsync({
+        name: newName.trim(),
+        type: newType,
+        cc,
+        daily_rate_low: rateLow,
+        daily_rate_high: rateHigh,
+        quantity: newQuantity,
+        plate: nonEmpty.join(", ") || null,
+        notes: newNotes.trim() || null,
+      });
+      toast.success("Το όχημα προστέθηκε στον στόλο");
+      resetAddForm();
+      setAddOpen(false);
+    } catch {
+      toast.error("Σφάλμα προσθήκης οχήματος");
     }
   };
 
@@ -272,7 +322,16 @@ export default function FleetPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 md:py-6">
-      <PageHeader title="Στόλος" subtitle={`${vehicles.length} οχήματα · αυτοκίνητα & scooters`} />
+      <PageHeader
+        title="Στόλος"
+        subtitle={`${vehicles.length} οχήματα · αυτοκίνητα & scooters`}
+        actions={
+          <Button onClick={() => setAddOpen(true)} className="active:scale-[0.97] transition-transform">
+            <Plus className="h-4 w-4 mr-1.5" />
+            Προσθήκη οχήματος
+          </Button>
+        }
+      />
 
       {/* Vehicle Type Filters */}
       <div className="flex gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-none -mx-3 px-3 scroll-fade-x flex-nowrap md:hidden">
@@ -395,6 +454,105 @@ export default function FleetPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Add Fleet dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display">Προσθήκη οχήματος</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Όνομα *</Label>
+              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="π.χ. Toyota Aygo" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Τύπος</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { key: "car", label: "Αυτοκίνητο", icon: Car },
+                  { key: "scooter", label: "Scooter", icon: Bike },
+                ] as const).map((t) => {
+                  const Icon = t.icon;
+                  const active = newType === t.key;
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => setNewType(t.key)}
+                      className={cn(
+                        "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-all active:scale-[0.97]",
+                        active
+                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                          : "bg-card text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1.5">
+                <Label>cc *</Label>
+                <Input type="number" min={0} value={newCc} onChange={(e) => setNewCc(e.target.value)} placeholder="1000" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Τιμή low (€) *</Label>
+                <Input type="number" min={0} step="0.5" value={newRateLow} onChange={(e) => setNewRateLow(e.target.value)} placeholder="25" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Τιμή high (€) *</Label>
+                <Input type="number" min={0} step="0.5" value={newRateHigh} onChange={(e) => setNewRateHigh(e.target.value)} placeholder="45" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Ποσότητα (Στόλος)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={newQuantity}
+                onChange={(e) => {
+                  const next = Math.max(1, parseInt(e.target.value) || 1);
+                  setNewQuantity(next);
+                  setNewPlates((prev) => Array.from({ length: next }, (_, i) => prev[i] ?? ""));
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Πινακίδες ανά μονάδα</Label>
+              {Array.from({ length: newQuantity }, (_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground w-14 shrink-0">Μονάδα {i + 1}</span>
+                  <Input
+                    value={newPlates[i] ?? ""}
+                    placeholder="π.χ. ΑΜΗ1234"
+                    onChange={(e) => {
+                      const next = [...newPlates];
+                      next[i] = e.target.value;
+                      setNewPlates(next);
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Σημειώσεις</Label>
+              <Textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)} rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>
+              Ακύρωση
+            </Button>
+            <Button onClick={() => void addVehicle()} disabled={createVehicle.isPending}>
+              Προσθήκη
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={blockOpen} onOpenChange={setBlockOpen}>
         <DialogContent>

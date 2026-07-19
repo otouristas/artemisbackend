@@ -66,6 +66,7 @@ export default function BookingFormPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [vehicleId, setVehicleId] = useState("");
+  const [assignedPlate, setAssignedPlate] = useState("");
   const [checkIn, setCheckIn] = useState<Date | undefined>();
   const [checkOut, setCheckOut] = useState<Date | undefined>();
   const [comments, setComments] = useState("");
@@ -102,6 +103,7 @@ export default function BookingFormPage() {
       setCustomerPhone(editBooking.customer_phone || "");
       setCustomerEmail(editBooking.customer_email || "");
       setVehicleId(editBooking.vehicle_id);
+      setAssignedPlate(editBooking.plate || "");
       setCheckIn(new Date(editBooking.check_in));
       setCheckOut(new Date(editBooking.check_out));
       setComments(editBooking.comments || "");
@@ -121,6 +123,7 @@ export default function BookingFormPage() {
       setCustomerPhone(fromClient?.phone ?? "");
       setCustomerEmail(fromClient?.email ?? "");
       setVehicleId(defaultVehicleId || fromClient?.preferred_vehicle_id || "");
+      setAssignedPlate("");
       setCheckIn(defaultDate);
       setCheckOut(undefined);
       setComments("");
@@ -151,6 +154,26 @@ export default function BookingFormPage() {
       return datesOverlap(checkIn, checkOut, bStart, bEnd);
     });
   }, [vehicleId, checkIn, checkOut, bookings, editBooking, isDuplicate]);
+
+  const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
+
+  // Individual unit plates of the selected fleet type (comma-separated in vehicles.plate)
+  const vehiclePlates = useMemo(
+    () => (selectedVehicle?.plate ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+    [selectedVehicle],
+  );
+
+  // Plates already assigned to overlapping bookings for the chosen dates
+  const takenPlates = useMemo(() => {
+    const set = new Set<string>();
+    for (const b of conflictingBookings) {
+      if (b.plate) set.add(b.plate);
+    }
+    return set;
+  }, [conflictingBookings]);
+
+  const fleetQuantity = selectedVehicle?.quantity ?? 1;
+  const freeUnits = Math.max(0, fleetQuantity - conflictingBookings.length);
 
   const resolveClientId = async (): Promise<string | null> => {
     if (clientId) return clientId;
@@ -183,6 +206,7 @@ export default function BookingFormPage() {
       customer_email: customerEmail || null,
       client_id: resolvedClientId,
       vehicle_id: vehicleId,
+      plate: assignedPlate || null,
       check_in: format(checkIn!, "yyyy-MM-dd"),
       check_out: format(checkOut!, "yyyy-MM-dd"),
       comments: comments || null,
@@ -268,8 +292,6 @@ export default function BookingFormPage() {
     setCheckOut(undefined);
     setStatus("pending");
   };
-
-  const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
 
   const handleWhatsApp = () => {
     if (!customerPhone || !selectedVehicle || !checkIn || !checkOut) {
@@ -496,7 +518,14 @@ export default function BookingFormPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Όχημα *</Label>
-                    <Select value={vehicleId} onValueChange={setVehicleId} required>
+                    <Select
+                      value={vehicleId}
+                      onValueChange={(v) => {
+                        setVehicleId(v);
+                        setAssignedPlate("");
+                      }}
+                      required
+                    >
                       <SelectTrigger><SelectValue placeholder="Επιλέξτε όχημα" /></SelectTrigger>
                       <SelectContent>
                         {vehicles.map((v) => (
@@ -519,6 +548,46 @@ export default function BookingFormPage() {
                     </Select>
                   </div>
                 </div>
+
+                {vehiclePlates.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Μονάδα / Πινακίδα</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {vehiclePlates.map((p) => {
+                        const taken = takenPlates.has(p) && assignedPlate !== p;
+                        const active = assignedPlate === p;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            disabled={taken}
+                            onClick={() => setAssignedPlate(active ? "" : p)}
+                            className={cn(
+                              "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all active:scale-[0.96]",
+                              taken
+                                ? "bg-destructive/10 text-destructive border-destructive/40 line-through cursor-not-allowed opacity-80"
+                                : active
+                                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                  : "bg-card text-muted-foreground hover:text-foreground hover:border-primary/40",
+                            )}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {checkIn && checkOut ? (
+                      <p className={cn("text-[11px]", freeUnits === 0 ? "text-destructive font-medium" : "text-muted-foreground")}>
+                        Διαθέσιμες μονάδες: {freeUnits}/{fleetQuantity} για τις επιλεγμένες ημερομηνίες
+                        {freeUnits === 0 && " — πλήρως κλεισμένο"}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">
+                        Επιλέξτε ημερομηνίες για να δείτε ποιες μονάδες είναι διαθέσιμες.
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">

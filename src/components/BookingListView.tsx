@@ -150,7 +150,14 @@ export function BookingListView({
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-semibold text-sm text-foreground">{b.customer_name}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{vehicleMap[b.vehicle_id]?.name}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {vehicleMap[b.vehicle_id]?.name}
+                      {(b.plate || vehicleMap[b.vehicle_id]?.plate) && (
+                        <span className="ml-1 font-semibold text-foreground/70">
+                          · {b.plate || vehicleMap[b.vehicle_id]?.plate}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0.5", STATUS_VARIANT[b.status])}>{STATUS_LABELS[b.status]}</Badge>
                 </div>
@@ -225,7 +232,14 @@ export function BookingListView({
                       <div className="font-medium">{b.customer_name}</div>
                       {b.customer_phone && <div className="text-xs text-muted-foreground">{b.customer_phone}</div>}
                     </td>
-                    <td className="px-3 py-2">{vehicleMap[b.vehicle_id]?.name}</td>
+                    <td className="px-3 py-2">
+                      <div>{vehicleMap[b.vehicle_id]?.name}</div>
+                      {(b.plate || vehicleMap[b.vehicle_id]?.plate) && (
+                        <div className="text-xs text-muted-foreground font-medium">
+                          {b.plate || vehicleMap[b.vehicle_id]?.plate}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-3 py-2">{format(parseISO(b.check_in), "dd/MM/yy")}</td>
                     <td className="px-3 py-2">{format(parseISO(b.check_out), "dd/MM/yy")}</td>
                     <td className="px-3 py-2"><Badge className={cn("text-xs", STATUS_VARIANT[b.status])}>{STATUS_LABELS[b.status]}</Badge></td>

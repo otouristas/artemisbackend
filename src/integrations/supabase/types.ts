@@ -30,6 +30,7 @@ export type Database = {
           id: string
           id_document: string | null
           payment_notes: string | null
+          plate: string | null
           status: Database["public"]["Enums"]["booking_status"]
           total_price: number | null
           updated_at: string
@@ -50,6 +51,7 @@ export type Database = {
           id?: string
           id_document?: string | null
           payment_notes?: string | null
+          plate?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
           total_price?: number | null
           updated_at?: string
@@ -70,6 +72,7 @@ export type Database = {
           id?: string
           id_document?: string | null
           payment_notes?: string | null
+          plate?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
           total_price?: number | null
           updated_at?: string
