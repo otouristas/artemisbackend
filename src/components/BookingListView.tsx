@@ -6,16 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -275,25 +266,16 @@ export function BookingListView({
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Διαγραφή κράτησης</AlertDialogTitle>
-            <AlertDialogDescription>
-              Είστε σίγουροι ότι θέλετε να διαγράψετε την κράτηση του{" "}
-              <strong>{deleteTarget?.customer_name}</strong>
-              {deleteTarget && vehicleMap[deleteTarget.vehicle_id] ? ` (${vehicleMap[deleteTarget.vehicle_id].name})` : ""}; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Διαγραφή
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete Confirmation */}
+      <ConfirmSheet
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Διαγραφή κράτησης"
+        description={`Είστε σίγουροι ότι θέλετε να διαγράψετε την κράτηση του ${deleteTarget?.customer_name ?? ""}${
+          deleteTarget && vehicleMap[deleteTarget.vehicle_id] ? ` (${vehicleMap[deleteTarget.vehicle_id].name})` : ""
+        }; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.`}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

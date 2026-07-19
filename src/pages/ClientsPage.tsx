@@ -1,19 +1,19 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
-import { Search, Plus, Phone, Mail } from "lucide-react";
+import { Search, Plus, Phone, Mail, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useClients, useCreateClient } from "@/hooks/useClients";
@@ -118,14 +118,14 @@ export default function ClientsPage() {
           <Button onClick={() => setOpen(true)}>Νέος πελάτης</Button>
         </div>
       ) : (
-        <div className="rounded-xl border bg-card divide-y">
+        <div className="inset-group border md:rounded-xl">
           {filtered.map((client) => {
             const stats = statsByClient.get(client.id);
             return (
               <button
                 key={client.id}
                 onClick={() => navigate(`/clients/${client.id}`)}
-                className="w-full text-left flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors"
+                className="pressable w-full text-left flex items-center gap-3 px-4 py-3.5 min-h-[64px] hover:bg-muted/40 transition-colors"
               >
                 <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold shrink-0">
                   {clientInitials(client.name)}
@@ -164,17 +164,18 @@ export default function ClientsPage() {
                     <p className="text-[11px] text-accent font-medium">υπόλ. {stats!.balance}€</p>
                   )}
                 </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 md:hidden" />
               </button>
             );
           })}
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-display">Νέος πελάτης</DialogTitle>
-          </DialogHeader>
+      <ResponsiveDialog open={open} onOpenChange={setOpen}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="font-display">Νέος πελάτης</ResponsiveDialogTitle>
+          </ResponsiveDialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Όνομα</Label>
@@ -189,16 +190,24 @@ export default function ClientsPage() {
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Ακύρωση
-            </Button>
-            <Button onClick={() => void handleCreate()} disabled={!name.trim() || createClient.isPending}>
+          <ResponsiveDialogFooter>
+            <Button
+              onClick={() => void handleCreate()}
+              disabled={!name.trim() || createClient.isPending}
+              className="coarse:h-12 coarse:rounded-xl coarse:text-base"
+            >
               Αποθήκευση
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="coarse:h-12 coarse:rounded-xl coarse:text-base"
+            >
+              Ακύρωση
+            </Button>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import {
   parseISO,
   startOfDay,
 } from "date-fns";
-import { Bike, Car, Plus, Trash2, LayoutGrid } from "lucide-react";
+import { Bike, Car, ChevronRight, Plus, Trash2, LayoutGrid } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,13 +14,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { toast } from "sonner";
 import { useVehicles, type Vehicle } from "@/hooks/useVehicles";
 import { useBookings } from "@/hooks/useBookings";
@@ -54,6 +56,7 @@ export default function FleetPage() {
   const [blockStart, setBlockStart] = useState("");
   const [blockEnd, setBlockEnd] = useState("");
   const [blockReason, setBlockReason] = useState("");
+  const [deleteBlockId, setDeleteBlockId] = useState<string | null>(null);
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState<"all" | "car" | "scooter">("all");
 
   const today = startOfDay(new Date());
@@ -262,12 +265,8 @@ export default function FleetPage() {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7 text-destructive"
-                    onClick={() =>
-                      deleteBlock.mutate(b.id, {
-                        onSuccess: () => toast.success("Διαγράφηκε"),
-                      })
-                    }
+                    className="h-7 w-7 coarse:h-11 coarse:w-11 text-destructive"
+                    onClick={() => setDeleteBlockId(b.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -325,10 +324,10 @@ export default function FleetPage() {
               key={type.key}
               onClick={() => setVehicleTypeFilter(type.key as any)}
               className={cn(
-                "flex items-center gap-1.5 shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 active:scale-[0.95]",
+                "pressable flex items-center gap-1.5 shrink-0 rounded-full px-3.5 py-1.5 min-h-9 coarse:min-h-10 coarse:px-4 text-xs font-semibold transition-colors duration-200",
                 active
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : "bg-card/70 backdrop-blur-md text-muted-foreground border-border/40 hover:text-foreground",
+                  ? "glass-chip-active text-primary"
+                  : "glass-chip text-muted-foreground hover:text-foreground",
               )}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -349,7 +348,7 @@ export default function FleetPage() {
         </div>
       ) : (
         <div className="grid lg:grid-cols-[1fr_340px] gap-5">
-          <div className="rounded-xl border bg-card divide-y divide-border/60 overflow-hidden h-fit">
+          <div className="inset-group border h-fit md:rounded-xl">
             {fleetUnits.length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">
                 Ο στόλος είναι άδειος. Πατήστε «Προσθήκη οχήματος» για να ξεκινήσετε.
@@ -367,7 +366,7 @@ export default function FleetPage() {
                       if (isMobile) setDetailsOpen(true);
                     }}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 text-left transition-colors active:bg-muted/50",
+                      "pressable w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 min-h-[56px] text-left transition-colors active:bg-muted/50",
                       active ? "bg-accent/10" : "hover:bg-muted/30",
                     )}
                   >
@@ -403,6 +402,7 @@ export default function FleetPage() {
                     >
                       {statusLabel[u.status].text}
                     </Badge>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 md:hidden" />
                   </button>
                 );
               })
@@ -419,25 +419,25 @@ export default function FleetPage() {
         </div>
       )}
 
-      {/* Mobile Drawer dialog for vehicle details */}
+      {/* Mobile bottom sheet for vehicle details */}
       {isMobile && selected && (
-        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-          <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="font-display">Λεπτομέρειες οχήματος</DialogTitle>
-            </DialogHeader>
-            <div className="py-2">
+        <Drawer open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <DrawerContent>
+            <DrawerHeader className="px-4 pb-2 text-left">
+              <DrawerTitle className="font-display">Λεπτομέρειες οχήματος</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-2">
               {renderDetailsForm()}
             </div>
-          </DialogContent>
-        </Dialog>
+          </DrawerContent>
+        </Drawer>
       )}
 
-      <Dialog open={blockOpen} onOpenChange={setBlockOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-display">Μπλοκ συντήρησης</DialogTitle>
-          </DialogHeader>
+      <ResponsiveDialog open={blockOpen} onOpenChange={setBlockOpen}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="font-display">Μπλοκ συντήρησης</ResponsiveDialogTitle>
+          </ResponsiveDialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Από</Label>
@@ -452,16 +452,39 @@ export default function FleetPage() {
               <Input value={blockReason} onChange={(e) => setBlockReason(e.target.value)} placeholder="Σέρβις, ζημιά…" />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBlockOpen(false)}>
-              Ακύρωση
-            </Button>
-            <Button onClick={() => void addBlock()} disabled={!blockStart || !blockEnd}>
+          <ResponsiveDialogFooter>
+            <Button
+              onClick={() => void addBlock()}
+              disabled={!blockStart || !blockEnd}
+              className="coarse:h-12 coarse:rounded-xl coarse:text-base"
+            >
               Αποθήκευση
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button
+              variant="outline"
+              onClick={() => setBlockOpen(false)}
+              className="coarse:h-12 coarse:rounded-xl coarse:text-base"
+            >
+              Ακύρωση
+            </Button>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+
+      <ConfirmSheet
+        open={deleteBlockId !== null}
+        onOpenChange={(open) => !open && setDeleteBlockId(null)}
+        title="Διαγραφή μπλοκ συντήρησης;"
+        description="Το όχημα θα εμφανίζεται ξανά διαθέσιμο για αυτές τις ημερομηνίες."
+        onConfirm={() => {
+          if (deleteBlockId) {
+            deleteBlock.mutate(deleteBlockId, {
+              onSuccess: () => toast.success("Διαγράφηκε"),
+            });
+          }
+          setDeleteBlockId(null);
+        }}
+      />
     </div>
   );
 }
