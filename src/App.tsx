@@ -11,6 +11,7 @@ import BookingsPage from "./pages/BookingsPage.tsx";
 import ClientsPage from "./pages/ClientsPage.tsx";
 import ClientProfilePage from "./pages/ClientProfilePage.tsx";
 import FleetPage from "./pages/FleetPage.tsx";
+import FleetFormPage from "./pages/FleetFormPage.tsx";
 import MoneyPage from "./pages/MoneyPage.tsx";
 import InsightsPage from "./pages/InsightsPage.tsx";
 import BookingFormPage from "./pages/BookingFormPage.tsx";
@@ -38,6 +39,7 @@ const App = () => (
                 <Route path="/money" element={<MoneyPage />} />
                 <Route path="/insights" element={<InsightsPage />} />
               </Route>
+              <Route path="/fleet/new" element={<FleetFormPage />} />
               <Route path="/booking/new" element={<BookingFormPage />} />
               <Route path="/booking/:id" element={<BookingFormPage />} />
             </Route>

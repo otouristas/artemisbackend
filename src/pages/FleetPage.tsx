@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   format,
   isWithinInterval,
@@ -22,10 +22,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useVehicles } from "@/hooks/useVehicles";
+import { useVehicles, type Vehicle } from "@/hooks/useVehicles";
 import { useBookings } from "@/hooks/useBookings";
 import { useUpdateVehicle } from "@/hooks/useUpdateVehicle";
-import { useCreateVehicle } from "@/hooks/useCreateVehicle";
 import {
   useCreateVehicleBlock,
   useDeleteVehicleBlock,
@@ -37,25 +36,16 @@ import { useIsMobile } from "@/hooks/use-mobile";
 export default function FleetPage() {
   const [params] = useSearchParams();
   const selectedFromUrl = params.get("vehicle");
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { data: vehicles = [], isLoading } = useVehicles();
   const { data: bookings = [] } = useBookings();
   const { data: blocks = [] } = useVehicleBlocks();
   const updateVehicle = useUpdateVehicle();
-  const createVehicle = useCreateVehicle();
   const createBlock = useCreateVehicleBlock();
   const deleteBlock = useDeleteVehicleBlock();
 
   const [selectedId, setSelectedId] = useState<string | null>(selectedFromUrl);
-  const [addOpen, setAddOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newType, setNewType] = useState<"car" | "scooter">("car");
-  const [newCc, setNewCc] = useState("");
-  const [newRateLow, setNewRateLow] = useState("");
-  const [newRateHigh, setNewRateHigh] = useState("");
-  const [newQuantity, setNewQuantity] = useState<number>(1);
-  const [newPlates, setNewPlates] = useState<string[]>([""]);
-  const [newNotes, setNewNotes] = useState("");
   const [plates, setPlates] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
@@ -74,17 +64,29 @@ export default function FleetPage() {
   }, [vehicles, vehicleTypeFilter]);
 
   const vehicleTypeCounts = useMemo(() => {
-    const counts = { all: vehicles.length, car: 0, scooter: 0 };
+    const counts = { all: 0, car: 0, scooter: 0 };
     for (const v of vehicles) {
-      if (v.type === "car") counts.car++;
-      if (v.type === "scooter") counts.scooter++;
+      const qty = v.quantity ?? 1;
+      counts.all += qty;
+      if (v.type === "car") counts.car += qty;
+      if (v.type === "scooter") counts.scooter += qty;
     }
     return counts;
   }, [vehicles]);
 
-  const statusByVehicle = useMemo(() => {
-    const map = new Map<string, "available" | "on_rent" | "blocked">();
-    for (const v of vehicles) {
+  // Final fleet: every type expanded into its individual units with plate + status
+  type FleetUnit = {
+    vehicle: Vehicle;
+    unitIndex: number;
+    plate: string | null;
+    status: "available" | "on_rent" | "blocked";
+  };
+
+  const fleetUnits = useMemo(() => {
+    const units: FleetUnit[] = [];
+    for (const v of filteredVehicles) {
+      const qty = v.quantity ?? 1;
+      const platesArr = (v.plate ?? "").split(",").map((s) => s.trim()).filter(Boolean);
       const blocked = blocks.some(
         (b) =>
           b.vehicle_id === v.id &&
@@ -93,21 +95,34 @@ export default function FleetPage() {
             end: startOfDay(parseISO(b.end_date)),
           }),
       );
-      if (blocked) {
-        map.set(v.id, "blocked");
-        continue;
+      const current = bookings.filter(
+        (b) =>
+          b.vehicle_id === v.id &&
+          b.status !== "cancelled" &&
+          isWithinInterval(today, {
+            start: startOfDay(parseISO(b.check_in)),
+            end: startOfDay(parseISO(b.check_out)),
+          }),
+      );
+      const assignedPlates = new Set(current.map((b) => b.plate).filter(Boolean) as string[]);
+      // bookings without an assigned plate occupy the first free units
+      let unassigned = current.filter((b) => !b.plate).length;
+      for (let i = 0; i < qty; i++) {
+        const plate = platesArr[i] ?? null;
+        let status: FleetUnit["status"] = "available";
+        if (blocked) {
+          status = "blocked";
+        } else if (plate && assignedPlates.has(plate)) {
+          status = "on_rent";
+        } else if (unassigned > 0) {
+          status = "on_rent";
+          unassigned--;
+        }
+        units.push({ vehicle: v, unitIndex: i, plate, status });
       }
-      const onRent = bookings.some((b) => {
-        if (b.vehicle_id !== v.id || b.status === "cancelled") return false;
-        return isWithinInterval(today, {
-          start: startOfDay(parseISO(b.check_in)),
-          end: startOfDay(parseISO(b.check_out)),
-        });
-      });
-      map.set(v.id, onRent ? "on_rent" : "available");
     }
-    return map;
-  }, [vehicles, bookings, blocks, today]);
+    return units;
+  }, [filteredVehicles, bookings, blocks, today]);
 
   const selected = vehicles.find((v) => v.id === (selectedId ?? selectedFromUrl));
 
@@ -122,45 +137,6 @@ export default function FleetPage() {
       setPlates(padded);
       setNotes(v.notes ?? "");
       setQuantity(v.quantity ?? 1);
-    }
-  };
-
-  const resetAddForm = () => {
-    setNewName("");
-    setNewType("car");
-    setNewCc("");
-    setNewRateLow("");
-    setNewRateHigh("");
-    setNewQuantity(1);
-    setNewPlates([""]);
-    setNewNotes("");
-  };
-
-  const addVehicle = async () => {
-    const cc = parseInt(newCc);
-    const rateLow = parseFloat(newRateLow);
-    const rateHigh = parseFloat(newRateHigh);
-    if (!newName.trim() || !cc || isNaN(rateLow) || isNaN(rateHigh)) {
-      toast.error("Συμπληρώστε όνομα, cc και τιμές");
-      return;
-    }
-    try {
-      const nonEmpty = newPlates.map((p) => p.trim()).filter(Boolean);
-      await createVehicle.mutateAsync({
-        name: newName.trim(),
-        type: newType,
-        cc,
-        daily_rate_low: rateLow,
-        daily_rate_high: rateHigh,
-        quantity: newQuantity,
-        plate: nonEmpty.join(", ") || null,
-        notes: newNotes.trim() || null,
-      });
-      toast.success("Το όχημα προστέθηκε στον στόλο");
-      resetAddForm();
-      setAddOpen(false);
-    } catch {
-      toast.error("Σφάλμα προσθήκης οχήματος");
     }
   };
 
@@ -324,9 +300,9 @@ export default function FleetPage() {
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 md:py-6">
       <PageHeader
         title="Στόλος"
-        subtitle={`${vehicles.length} οχήματα · αυτοκίνητα & scooters`}
+        subtitle={`${vehicleTypeCounts.all} οχήματα · ${vehicles.length} τύποι`}
         actions={
-          <Button onClick={() => setAddOpen(true)} className="active:scale-[0.97] transition-transform">
+          <Button onClick={() => navigate("/fleet/new")} className="active:scale-[0.97] transition-transform">
             <Plus className="h-4 w-4 mr-1.5" />
             Προσθήκη οχήματος
           </Button>
@@ -364,71 +340,71 @@ export default function FleetPage() {
       </div>
 
       {isLoading ? (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-40 rounded-xl" />
+            <Skeleton key={i} className="h-14 rounded-xl" />
           ))}
         </div>
       ) : (
         <div className="grid lg:grid-cols-[1fr_340px] gap-5">
-          <div className="grid sm:grid-cols-2 gap-3">
-            {filteredVehicles.map((v) => {
-              const status = statusByVehicle.get(v.id) ?? "available";
-              const Icon = v.type === "car" ? Car : Bike;
-              const active = selected?.id === v.id;
-              return (
-                <button
-                  key={v.id}
-                  onClick={() => {
-                    openVehicle(v.id);
-                    if (isMobile) setDetailsOpen(true);
-                  }}
-                  className={cn(
-                    "text-left rounded-xl border bg-card transition-all duration-200 active:scale-[0.98]",
-                    active ? "ring-2 ring-accent border-accent" : "hover:border-primary/30",
-                    "flex md:block items-center p-2.5 md:p-0 gap-3"
-                  )}
-                >
-                  <div className={cn(
-                    "bg-muted relative overflow-hidden shrink-0",
-                    "w-14 h-14 rounded-lg md:w-full md:h-auto md:aspect-[16/9] md:rounded-t-xl md:rounded-b-none"
-                  )}>
-                    {v.image_url ? (
-                      <img src={v.image_url} alt={v.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Icon className="h-6 w-6 md:h-10 md:w-10 text-muted-foreground" />
-                      </div>
+          <div className="rounded-xl border bg-card divide-y divide-border/60 overflow-hidden h-fit">
+            {fleetUnits.length === 0 ? (
+              <div className="p-10 text-center text-sm text-muted-foreground">
+                Ο στόλος είναι άδειος. Πατήστε «Προσθήκη οχήματος» για να ξεκινήσετε.
+              </div>
+            ) : (
+              fleetUnits.map((u) => {
+                const Icon = u.vehicle.type === "car" ? Car : Bike;
+                const active = selected?.id === u.vehicle.id;
+                const qty = u.vehicle.quantity ?? 1;
+                return (
+                  <button
+                    key={`${u.vehicle.id}-${u.unitIndex}`}
+                    onClick={() => {
+                      openVehicle(u.vehicle.id);
+                      if (isMobile) setDetailsOpen(true);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 text-left transition-colors active:bg-muted/50",
+                      active ? "bg-accent/10" : "hover:bg-muted/30",
                     )}
-                    <Badge variant="outline" className={cn(
-                      "hidden md:inline-flex absolute top-2 left-2 text-[10px] bg-card/90", 
-                      statusLabel[status].className
-                    )}>
-                      {statusLabel[status].text}
-                    </Badge>
-                  </div>
-                  <div className="flex-1 min-w-0 p-1 md:p-3">
-                    <div className="flex items-center justify-between md:justify-start gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <p className="font-medium text-sm truncate">{v.name}</p>
-                      </div>
-                      <Badge variant="outline" className={cn(
-                        "md:hidden text-[9px] px-1.5 py-0.5 shrink-0", 
-                        statusLabel[status].className
-                      )}>
-                        {statusLabel[status].text}
-                      </Badge>
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden shrink-0 flex items-center justify-center">
+                      {u.vehicle.image_url ? (
+                        <img src={u.vehicle.image_url} alt={u.vehicle.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Icon className="h-5 w-5 text-muted-foreground" />
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">
-                      {v.cc}cc · {v.daily_rate_low}–{v.daily_rate_high}€/ημ.
-                      {v.plate ? ` · ${v.plate}` : ""}
-                      {(v.quantity ?? 1) > 1 ? ` · x${v.quantity}` : ""}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {u.vehicle.name}
+                        {qty > 1 && (
+                          <span className="text-muted-foreground font-normal"> · Μονάδα {u.unitIndex + 1}/{qty}</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {u.vehicle.cc}cc · {u.vehicle.daily_rate_low}–{u.vehicle.daily_rate_high}€/ημ.
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-md border px-2 py-1 text-[11px] font-semibold tracking-wide",
+                        u.plate ? "bg-muted/40 text-foreground/80" : "text-muted-foreground border-dashed",
+                      )}
+                    >
+                      {u.plate || "Χωρίς πινακίδα"}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={cn("shrink-0 text-[10px] px-1.5 py-0.5", statusLabel[u.status].className)}
+                    >
+                      {statusLabel[u.status].text}
+                    </Badge>
+                  </button>
+                );
+              })
+            )}
           </div>
 
           <aside className="hidden lg:block rounded-xl border bg-card p-4 h-fit sticky top-4">
@@ -454,105 +430,6 @@ export default function FleetPage() {
           </DialogContent>
         </Dialog>
       )}
-
-      {/* Add Fleet dialog */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-display">Προσθήκη οχήματος</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Όνομα *</Label>
-              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="π.χ. Toyota Aygo" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Τύπος</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { key: "car", label: "Αυτοκίνητο", icon: Car },
-                  { key: "scooter", label: "Scooter", icon: Bike },
-                ] as const).map((t) => {
-                  const Icon = t.icon;
-                  const active = newType === t.key;
-                  return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => setNewType(t.key)}
-                      className={cn(
-                        "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-all active:scale-[0.97]",
-                        active
-                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                          : "bg-card text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {t.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="space-y-1.5">
-                <Label>cc *</Label>
-                <Input type="number" min={0} value={newCc} onChange={(e) => setNewCc(e.target.value)} placeholder="1000" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Τιμή low (€) *</Label>
-                <Input type="number" min={0} step="0.5" value={newRateLow} onChange={(e) => setNewRateLow(e.target.value)} placeholder="25" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Τιμή high (€) *</Label>
-                <Input type="number" min={0} step="0.5" value={newRateHigh} onChange={(e) => setNewRateHigh(e.target.value)} placeholder="45" />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Ποσότητα (Στόλος)</Label>
-              <Input
-                type="number"
-                min={1}
-                value={newQuantity}
-                onChange={(e) => {
-                  const next = Math.max(1, parseInt(e.target.value) || 1);
-                  setNewQuantity(next);
-                  setNewPlates((prev) => Array.from({ length: next }, (_, i) => prev[i] ?? ""));
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Πινακίδες ανά μονάδα</Label>
-              {Array.from({ length: newQuantity }, (_, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground w-14 shrink-0">Μονάδα {i + 1}</span>
-                  <Input
-                    value={newPlates[i] ?? ""}
-                    placeholder="π.χ. ΑΜΗ1234"
-                    onChange={(e) => {
-                      const next = [...newPlates];
-                      next[i] = e.target.value;
-                      setNewPlates(next);
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="space-y-1.5">
-              <Label>Σημειώσεις</Label>
-              <Textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)} rows={2} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>
-              Ακύρωση
-            </Button>
-            <Button onClick={() => void addVehicle()} disabled={createVehicle.isPending}>
-              Προσθήκη
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={blockOpen} onOpenChange={setBlockOpen}>
         <DialogContent>
