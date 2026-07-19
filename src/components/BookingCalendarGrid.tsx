@@ -181,7 +181,7 @@ export function BookingCalendarGrid({
                       {displayName}
                     </div>
                     <div className={cn("text-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")}>
-                      {vehicle.cc}cc · {vehicle.daily_rate_low}-{vehicle.daily_rate_high}€
+                      {vehicle.cc}cc · {vehicle.daily_rate_low}-{vehicle.daily_rate_high}€{vehicle.plate ? ` · ${vehicle.plate}` : ""}
                     </div>
                   </td>
                   {days.map((day) => {
