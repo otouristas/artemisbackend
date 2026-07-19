@@ -217,17 +217,19 @@ export default function FleetPage() {
         </div>
         <div className="space-y-1.5">
           <Label>Ποσότητα (Στόλος)</Label>
-          <Input
-            type="number"
-            min={1}
+          <select
             value={quantity}
             onChange={(e) => {
-              const next = Math.max(1, parseInt(e.target.value) || 1);
+              const next = parseInt(e.target.value);
               setQuantity(next);
-              // resize plates array when quantity changes
               setPlates((prev) => Array.from({ length: next }, (_, i) => prev[i] ?? ""));
             }}
-          />
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            {Array.from({ length: 15 }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
         </div>
         <div className="space-y-1.5">
           <Label>Σημειώσεις</Label>
