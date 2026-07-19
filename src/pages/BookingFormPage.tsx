@@ -29,19 +29,9 @@ import { VehicleChecklist } from "@/components/VehicleChecklist";
 import { BookingReceipt } from "@/components/BookingReceipt";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useBookings, useCreateBooking, useUpdateBooking, useDeleteBooking } from "@/hooks/useBookings";
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Εκκρεμεί",
-  confirmed: "Επιβεβαιωμένη",
-  cancelled: "Ακυρωμένη",
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-  phone: "Τηλέφωνο",
-  walkin: "Walk-in",
-  online: "Online",
-  email: "Email",
-};
+import { useClients } from "@/hooks/useClients";
+import { STATUS_LABELS, SOURCE_LABELS } from "@/lib/status";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function datesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return isBefore(aStart, bEnd) && isAfter(aEnd, bStart);
@@ -54,6 +44,7 @@ export default function BookingFormPage() {
 
   const { data: vehicles = [], isLoading: loadingVehicles } = useVehicles();
   const { data: bookings = [], isLoading: loadingBookings } = useBookings();
+  const { data: clients = [] } = useClients();
   const createBooking = useCreateBooking();
   const updateBooking = useUpdateBooking();
   const deleteBooking = useDeleteBooking();
@@ -64,11 +55,13 @@ export default function BookingFormPage() {
   }, [id, bookings]);
 
   const defaultVehicleId = searchParams.get("vehicleId") || undefined;
+  const defaultClientId = searchParams.get("clientId") || undefined;
   const defaultDateStr = searchParams.get("date");
   const defaultDate = useMemo(() => {
     return defaultDateStr ? parseISO(defaultDateStr) : new Date();
   }, [defaultDateStr]);
 
+  const [clientId, setClientId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -104,6 +97,7 @@ export default function BookingFormPage() {
     if (isInitialized) return;
 
     if (editBooking) {
+      setClientId(editBooking.client_id);
       setCustomerName(editBooking.customer_name);
       setCustomerPhone(editBooking.customer_phone || "");
       setCustomerEmail(editBooking.customer_email || "");
@@ -113,16 +107,20 @@ export default function BookingFormPage() {
       setComments(editBooking.comments || "");
       setPaymentNotes(editBooking.payment_notes || "");
       setStatus(editBooking.status);
-      setDeliveryLocation((editBooking as any).delivery_location || "");
-      setDepositAmount(String((editBooking as any).deposit_amount || ""));
-      setTotalPrice(String((editBooking as any).total_price || ""));
-      setIdDocument((editBooking as any).id_document || "");
-      setBookingSource((editBooking as any).booking_source || "phone");
+      setDeliveryLocation(editBooking.delivery_location || "");
+      setDepositAmount(String(editBooking.deposit_amount || ""));
+      setTotalPrice(String(editBooking.total_price || ""));
+      setIdDocument(editBooking.id_document || "");
+      setBookingSource(editBooking.booking_source || "phone");
     } else {
-      setCustomerName("");
-      setCustomerPhone("");
-      setCustomerEmail("");
-      setVehicleId(defaultVehicleId || "");
+      const fromClient = defaultClientId
+        ? clients.find((c) => c.id === defaultClientId)
+        : undefined;
+      setClientId(fromClient?.id ?? null);
+      setCustomerName(fromClient?.name ?? "");
+      setCustomerPhone(fromClient?.phone ?? "");
+      setCustomerEmail(fromClient?.email ?? "");
+      setVehicleId(defaultVehicleId || fromClient?.preferred_vehicle_id || "");
       setCheckIn(defaultDate);
       setCheckOut(undefined);
       setComments("");
@@ -131,12 +129,12 @@ export default function BookingFormPage() {
       setDeliveryLocation("");
       setDepositAmount("");
       setTotalPrice("");
-      setIdDocument("");
+      setIdDocument(fromClient?.id_document ?? "");
       setBookingSource("phone");
       setIsDuplicate(false);
     }
     setIsInitialized(true);
-  }, [editBooking, defaultVehicleId, defaultDate, isLoading, isInitialized]);
+  }, [editBooking, defaultVehicleId, defaultClientId, defaultDate, isLoading, isInitialized, clients]);
 
   // Compute conflicting bookings for the selected vehicle + dates
   const conflictingBookings = useMemo(() => {
@@ -154,11 +152,36 @@ export default function BookingFormPage() {
     });
   }, [vehicleId, checkIn, checkOut, bookings, editBooking, isDuplicate]);
 
-  const buildSubmitData = () => {
-    const data: any = {
+  const resolveClientId = async (): Promise<string | null> => {
+    if (clientId) return clientId;
+    const phoneKey = customerPhone.trim();
+    const existing = clients.find(
+      (c) =>
+        c.name.trim().toLowerCase() === customerName.trim().toLowerCase() &&
+        (c.phone || "") === phoneKey,
+    );
+    if (existing) return existing.id;
+    const { data, error } = await supabase
+      .from("clients")
+      .insert({
+        name: customerName.trim(),
+        phone: phoneKey || null,
+        email: customerEmail.trim() || null,
+        id_document: idDocument.trim() || null,
+      })
+      .select("id")
+      .single();
+    if (error) return null;
+    return data.id as string;
+  };
+
+  const buildSubmitData = async () => {
+    const resolvedClientId = await resolveClientId();
+    return {
       customer_name: customerName,
       customer_phone: customerPhone || null,
       customer_email: customerEmail || null,
+      client_id: resolvedClientId,
       vehicle_id: vehicleId,
       check_in: format(checkIn!, "yyyy-MM-dd"),
       check_out: format(checkOut!, "yyyy-MM-dd"),
@@ -171,16 +194,14 @@ export default function BookingFormPage() {
       id_document: idDocument || null,
       booking_source: bookingSource,
     };
-    return data;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName || !vehicleId || !checkIn || !checkOut) return;
 
-    const data = buildSubmitData();
+    const data = await buildSubmitData();
 
-    // Check for conflicts before submitting
     if (conflictingBookings.length > 0) {
       setPendingSubmitData(data);
       setShowConflictDialog(true);
@@ -198,7 +219,7 @@ export default function BookingFormPage() {
         {
           onSuccess: () => {
             toast.success("Η κράτηση ενημερώθηκε!");
-            navigate(-1);
+            navigate("/bookings");
           },
           onError: () => {
             toast.error("Σφάλμα κατά την ενημέρωση");
@@ -207,15 +228,15 @@ export default function BookingFormPage() {
       );
     } else {
       createBooking.mutate(data, {
-        onSuccess: () => {
-          toast.success("Η κράτηση δημιουργήθηκε!");
-          navigate("/");
-        },
-        onError: () => {
-          toast.error("Σφάλμα κατά τη δημιουργία");
-        },
-      });
-    }
+          onSuccess: () => {
+            toast.success("Η κράτηση δημιουργήθηκε!");
+            navigate("/bookings");
+          },
+          onError: () => {
+            toast.error("Σφάλμα κατά τη δημιουργία");
+          },
+        });
+      }
   };
 
   const handleConflictContinue = () => {
@@ -231,7 +252,7 @@ export default function BookingFormPage() {
       deleteBooking.mutate(editBooking.id, {
         onSuccess: () => {
           toast.success("Η κράτηση διαγράφηκε!");
-          navigate("/");
+          navigate("/bookings");
         },
         onError: () => {
           toast.error("Σφάλμα κατά τη διαγραφή");
@@ -359,9 +380,10 @@ export default function BookingFormPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-muted-foreground">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-        <p className="text-sm">Φόρτωση στοιχείων κράτησης...</p>
+      <div className="min-h-screen bg-background px-4 py-8 max-w-4xl mx-auto space-y-4">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
       </div>
     );
   }
@@ -372,33 +394,32 @@ export default function BookingFormPage() {
         <AlertTriangle className="h-10 w-10 text-destructive mb-2" />
         <h2 className="text-lg font-bold text-foreground mb-1">Η κράτηση δεν βρέθηκε</h2>
         <p className="text-sm mb-4 font-normal">Ίσως έχει διαγραφεί ή το link είναι εσφαλμένο.</p>
-        <Button onClick={() => navigate("/")} variant="outline">
-          <ArrowLeft className="h-4 w-4 mr-1.5" /> Επιστροφή στο Ημερολόγιο
+        <Button onClick={() => navigate("/bookings")} variant="outline">
+          <ArrowLeft className="h-4 w-4 mr-1.5" /> Επιστροφή στις κρατήσεις
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-12">
-      {/* Top Banner Header */}
-      <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b">
-        <div className="max-w-4xl mx-auto px-4 py-6 md:py-8 flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-background pb-12 page-enter">
+      <div className="border-b bg-card">
+        <div className="max-w-4xl mx-auto px-4 py-5 md:py-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
               size="icon"
-              onClick={() => navigate(-1)}
-              className="h-9 w-9 shrink-0 transition-transform duration-200 hover:-translate-x-1"
+              onClick={() => navigate("/bookings")}
+              className="h-9 w-9 shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">
+              <h1 className="font-display text-xl md:text-2xl tracking-tight text-foreground">
                 {editBooking ? (isDuplicate ? "Αντιγραφή κράτησης" : "Επεξεργασία κράτησης") : "Νέα κράτηση"}
               </h1>
               <p className="text-xs md:text-sm text-muted-foreground">
-                {editBooking && !isDuplicate ? `Κράτηση του/της ${editBooking.customer_name}` : "Δημιουργία νέας κράτησης στο σύστημα"}
+                {editBooking && !isDuplicate ? `Κράτηση του/της ${editBooking.customer_name}` : "Πελάτης · Όχημα · Οικονομικά · Επικοινωνία"}
               </p>
             </div>
           </div>
@@ -424,7 +445,7 @@ export default function BookingFormPage() {
             <div className="rounded-lg border border-warning/40 bg-warning/10 p-4 flex items-start gap-3 shadow-sm animate-pulse-subtle">
               <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
               <div className="text-sm">
-                <p className="font-semibold text-warning">⚠️ Σύγκρουση ημερομηνιών!</p>
+                <p className="font-semibold text-warning">Σύγκρουση ημερομηνιών</p>
                 <p className="text-muted-foreground text-xs mt-1">
                   Το όχημα <strong>{selectedVehicle?.name}</strong> έχει ήδη{" "}
                   {conflictingBookings.length === 1 ? "κράτηση" : `${conflictingBookings.length} κρατήσεις`} για αυτές τις ημερομηνίες:
@@ -445,7 +466,7 @@ export default function BookingFormPage() {
             <div className="md:col-span-2 space-y-6">
               {/* Customer info card */}
               <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Στοιχεία Πελάτη</h2>
+                <h2 className="font-display text-lg">Πελάτης</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Όνομα πελάτη *</Label>
@@ -471,7 +492,7 @@ export default function BookingFormPage() {
 
               {/* Booking Info Card */}
               <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Στοιχεία Κράτησης</h2>
+                <h2 className="font-display text-lg">Όχημα και ημερομηνίες</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Όχημα *</Label>
@@ -532,7 +553,7 @@ export default function BookingFormPage() {
 
                 {daysCount > 0 && (
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted text-xs text-muted-foreground font-medium">
-                    📅 Διάρκεια: {daysCount} ημέρ{daysCount === 1 ? "α" : "ες"}
+                    Διάρκεια: {daysCount} ημέρ{daysCount === 1 ? "α" : "ες"}
                   </div>
                 )}
 
@@ -550,7 +571,7 @@ export default function BookingFormPage() {
               {/* Checklist - only for existing bookings */}
               {editBooking && !isDuplicate && (
                 <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">📋 Checklist Παράδοσης / Παραλαβής</h2>
+                  <h2 className="font-display text-lg">Checklist παράδοσης / παραλαβής</h2>
                   <VehicleChecklist bookingId={editBooking.id} />
                 </div>
               )}
@@ -560,15 +581,15 @@ export default function BookingFormPage() {
             <div className="space-y-6">
               {/* Pricing card */}
               <div className="bg-card/70 border border-border/80 rounded-xl p-5 shadow-sm space-y-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Οικονομικά & Κατάσταση</h2>
+                <h2 className="font-display text-lg">Οικονομικά</h2>
 
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Κατάσταση κράτησης</Label>
                   <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      {(["pending", "confirmed", "cancelled"] as const).map((value) => (
+                        <SelectItem key={value} value={value}>{STATUS_LABELS[value]}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -595,7 +616,7 @@ export default function BookingFormPage() {
                     <div className="rounded-lg border bg-primary/5 p-3.5 space-y-1.5 transition-all animate-in fade-in slide-in-from-top-1">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold text-primary">
-                          💡 {aiSuggestion.suggested_total}€
+                          {aiSuggestion.suggested_total}€
                           <span className="text-xs font-normal text-muted-foreground ml-1">
                             ({aiSuggestion.daily_rate}€/ημέρα)
                           </span>
@@ -634,7 +655,7 @@ export default function BookingFormPage() {
                         ? "bg-warning/10 text-warning border border-warning/20"
                         : "bg-success/10 text-success border border-success/20"
                     )}>
-                      {remainingBalance > 0 ? `${remainingBalance}€` : "Εξοφλημένο ✓"}
+                      {remainingBalance > 0 ? `${remainingBalance}€` : "Εξοφλημένο"}
                     </span>
                   </div>
                 )}
@@ -648,7 +669,7 @@ export default function BookingFormPage() {
               {/* Utility actions card */}
               {((editBooking && !isDuplicate) || customerPhone) && (
                 <div className="bg-card/70 border border-border/80 rounded-xl p-5 shadow-sm space-y-3 animate-in fade-in duration-200">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1">Βοηθητικές Ενέργειες</h2>
+                  <h2 className="font-display text-lg mb-1">Επικοινωνία</h2>
                   <div className="flex flex-col gap-2">
                     {editBooking && !isDuplicate && (
                       <BookingReceipt booking={editBooking} vehicle={selectedVehicle} />
@@ -673,7 +694,7 @@ export default function BookingFormPage() {
                 <Button type="submit" className="w-full text-base font-semibold py-5">
                   {editBooking && !isDuplicate ? "Ενημέρωση Κράτησης" : "Αποθήκευση Κράτησης"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate(-1)} className="w-full">
+                <Button type="button" variant="outline" onClick={() => navigate("/bookings")} className="w-full">
                   Ακύρωση
                 </Button>
                 {editBooking && !isDuplicate && (

@@ -52,7 +52,10 @@ export function useCreateBooking() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["bookings"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookings"] });
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    },
   });
 }
 
@@ -69,7 +72,10 @@ export function useUpdateBooking() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["bookings"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookings"] });
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    },
   });
 }
 

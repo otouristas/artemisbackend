@@ -1,20 +1,29 @@
-# Artemis Backend
+# Artemis CRM
 
-Standalone booking admin for **Artemis Rental** (Sifnos).
+Standalone booking CRM for **Artemis Rental** (Sifnos).
 
-- Vite + React + Supabase
-- Fleet: cars and scooters
-- Access: authenticated admin only (`info@artemisrental.gr`)
+## Modules
+
+- **Σήμερα**: arrivals, departures, pending, balances, 7-day occupancy
+- **Κρατήσεις**: pipeline + calendar / list
+- **Πελάτες**: CRM profiles, LTV, merge duplicates
+- **Στόλος**: inventory, plates, maintenance blocks
+- **Οικονομικά**: expected / collected / open balances
+- **Στατιστικά**: season KPIs and charts
 
 ## Setup
 
 ```bash
 npm install
 cp .env.example .env
-# fill VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY
+# VITE_SUPABASE_URL + VITE_SUPABASE_PUBLISHABLE_KEY
 npm run dev
 ```
 
 ## Auth
 
-Only `info@artemisrental.gr` can sign in. Database RLS uses `is_artemis_admin()` so other authenticated users cannot read or write data. Do not commit secrets or passwords.
+Only `info@artemisrental.gr` can sign in. RLS uses `is_artemis_admin()`.
+
+## Shortcuts
+
+- `Cmd/Ctrl + K`: command palette

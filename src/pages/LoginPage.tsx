@@ -29,17 +29,32 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-3">
-          <img src={logoImg} alt="Artemis Rental" className="h-12 mx-auto object-contain" />
+    <div className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden bg-[#0b2a3c]">
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse at 20% 10%, rgba(201,131,58,0.35), transparent 45%), radial-gradient(ellipse at 80% 90%, rgba(247,244,239,0.12), transparent 50%), linear-gradient(160deg, #0b2a3c 0%, #123a52 55%, #0b2a3c 100%)",
+        }}
+      />
+
+      <div className="relative w-full max-w-md space-y-8">
+        <div className="text-center space-y-4">
+          <img
+            src={logoImg}
+            alt="Artemis Rental"
+            className="h-14 mx-auto object-contain brightness-0 invert"
+          />
           <div>
-            <h1 className="text-xl font-bold tracking-tight">Artemis Rental</h1>
-            <p className="text-sm text-muted-foreground">Διαχείριση κρατήσεων · Σίφνος</p>
+            <h1 className="font-display text-4xl text-[#f7f4ef] tracking-tight">Artemis</h1>
+            <p className="text-sm text-[#f7f4ef]/70 mt-1">CRM κρατήσεων · Σίφνος</p>
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4 rounded-xl border bg-card p-5 shadow-sm">
+        <form
+          onSubmit={onSubmit}
+          className="space-y-4 rounded-2xl border border-white/15 bg-[#f7f4ef]/95 backdrop-blur px-6 py-6 shadow-2xl"
+        >
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -49,6 +64,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className="bg-white"
             />
           </div>
           <div className="space-y-2">
@@ -60,6 +76,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              className="bg-white"
             />
           </div>
 
@@ -69,7 +86,11 @@ export default function LoginPage() {
             </p>
           )}
 
-          <Button type="submit" className="w-full" disabled={submitting || loading}>
+          <Button
+            type="submit"
+            className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+            disabled={submitting || loading}
+          >
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -80,6 +101,10 @@ export default function LoginPage() {
             )}
           </Button>
         </form>
+
+        <p className="text-center text-[11px] text-[#f7f4ef]/45">
+          Πρόσβαση μόνο για εξουσιοδοτημένο προσωπικό Artemis Rental
+        </p>
       </div>
     </div>
   );

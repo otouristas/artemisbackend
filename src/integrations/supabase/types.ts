@@ -19,6 +19,7 @@ export type Database = {
           booking_source: string | null
           check_in: string
           check_out: string
+          client_id: string | null
           comments: string | null
           created_at: string
           customer_email: string | null
@@ -38,6 +39,7 @@ export type Database = {
           booking_source?: string | null
           check_in: string
           check_out: string
+          client_id?: string | null
           comments?: string | null
           created_at?: string
           customer_email?: string | null
@@ -57,6 +59,7 @@ export type Database = {
           booking_source?: string | null
           check_in?: string
           check_out?: string
+          client_id?: string | null
           comments?: string | null
           created_at?: string
           customer_email?: string | null
@@ -74,8 +77,65 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "bookings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bookings_vehicle_id_fkey"
             columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          id_document: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          preferred_language: string | null
+          preferred_vehicle_id: string | null
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          id_document?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          preferred_language?: string | null
+          preferred_vehicle_id?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          id_document?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          preferred_language?: string | null
+          preferred_vehicle_id?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_preferred_vehicle_id_fkey"
+            columns: ["preferred_vehicle_id"]
             isOneToOne: false
             referencedRelation: "vehicles"
             referencedColumns: ["id"]
@@ -123,8 +183,44 @@ export type Database = {
           },
         ]
       }
+      vehicle_blocks: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          reason: string | null
+          start_date: string
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          reason?: string | null
+          start_date: string
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          reason?: string | null
+          start_date?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_blocks_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
+          active: boolean
           cc: number
           created_at: string
           daily_rate_high: number
@@ -132,9 +228,12 @@ export type Database = {
           id: string
           image_url: string | null
           name: string
+          notes: string | null
+          plate: string | null
           type: Database["public"]["Enums"]["vehicle_type"]
         }
         Insert: {
+          active?: boolean
           cc: number
           created_at?: string
           daily_rate_high: number
@@ -142,9 +241,12 @@ export type Database = {
           id?: string
           image_url?: string | null
           name: string
+          notes?: string | null
+          plate?: string | null
           type: Database["public"]["Enums"]["vehicle_type"]
         }
         Update: {
+          active?: boolean
           cc?: number
           created_at?: string
           daily_rate_high?: number
@@ -152,6 +254,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           name?: string
+          notes?: string | null
+          plate?: string | null
           type?: Database["public"]["Enums"]["vehicle_type"]
         }
         Relationships: []
