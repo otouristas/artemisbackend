@@ -79,8 +79,6 @@ export default function BookingFormPage() {
   const [idDocument, setIdDocument] = useState("");
   const [bookingSource, setBookingSource] = useState("phone");
   const [isDuplicate, setIsDuplicate] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<{ suggested_total: number; daily_rate: number; explanation: string } | null>(null);
 
   // Rates, extras, and payment method state
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
@@ -328,33 +326,6 @@ export default function BookingFormPage() {
       totalPrice: totalPrice ? Number(totalPrice) : undefined,
     });
     window.open(url, "_blank");
-  };
-
-  const handleAiPrice = async () => {
-    if (!vehicleId || !checkIn || !checkOut || !selectedVehicle) {
-      toast.error("Επιλέξτε όχημα και ημερομηνίες πρώτα");
-      return;
-    }
-    setAiLoading(true);
-    setAiSuggestion(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("suggest-price", {
-        body: {
-          vehicle_name: selectedVehicle.name,
-          daily_rate_low: selectedVehicle.daily_rate_low,
-          daily_rate_high: selectedVehicle.daily_rate_high,
-          check_in: format(checkIn, "yyyy-MM-dd"),
-          check_out: format(checkOut, "yyyy-MM-dd"),
-        },
-      });
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
-      setAiSuggestion(data);
-    } catch (err: any) {
-      toast.error(err.message || "Σφάλμα AI πρότασης τιμής");
-    } finally {
-      setAiLoading(false);
-    }
   };
 
   const daysCount = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
@@ -774,31 +745,18 @@ export default function BookingFormPage() {
 
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Συνολικό ποσό (€)</Label>
-                  <div className="flex gap-1.5">
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={totalPrice}
-                      onChange={(e) => {
-                        setTotalPrice(e.target.value);
-                        setIsManualPrice(true);
-                      }}
-                      placeholder="0"
-                      className="text-lg font-semibold"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={handleAiPrice}
-                      disabled={aiLoading}
-                      title="AI Πρόταση τιμής"
-                      className="shrink-0"
-                    >
-                      {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
-                    </Button>
-                  </div>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={totalPrice}
+                    onChange={(e) => {
+                      setTotalPrice(e.target.value);
+                      setIsManualPrice(true);
+                    }}
+                    placeholder="0"
+                    className="text-lg font-semibold"
+                  />
 
                   {isManualPrice && autoCalculatedTotal > 0 && (
                     <button
@@ -812,34 +770,6 @@ export default function BookingFormPage() {
                     >
                       Επαναφορά στην αυτόματη τιμή ({autoCalculatedTotal}€)
                     </button>
-                  )}
-
-                  {aiSuggestion && (
-                    <div className="rounded-lg border bg-primary/5 p-3.5 space-y-1.5 transition-all animate-in fade-in slide-in-from-top-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-primary">
-                          {aiSuggestion.suggested_total}€
-                          <span className="text-xs font-normal text-muted-foreground ml-1">
-                            ({aiSuggestion.daily_rate}€/ημέρα)
-                          </span>
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-xs hover:bg-primary/10 hover:text-primary"
-                          onClick={() => {
-                            setTotalPrice(String(aiSuggestion.suggested_total));
-                            setIsManualPrice(true);
-                            setAiSuggestion(null);
-                            toast.success("Τιμή AI εφαρμόστηκε!");
-                          }}
-                        >
-                          Εφαρμογή
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{aiSuggestion.explanation}</p>
-                    </div>
                   )}
                 </div>
 
