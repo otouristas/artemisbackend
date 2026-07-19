@@ -261,7 +261,7 @@ export default function ClientProfilePage() {
 
         <div className="space-y-4">
           <div className="rounded-xl border bg-card p-4">
-            <h2 className="font-display text-lg mb-3">Ιστορικό διαμονών</h2>
+            <h2 className="font-display text-lg mb-3">Ιστορικό πελάτη</h2>
             {clientBookings.length === 0 ? (
               <p className="text-sm text-muted-foreground">Δεν υπάρχουν κρατήσεις ακόμα.</p>
             ) : (
