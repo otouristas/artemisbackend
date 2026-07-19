@@ -1,6 +1,9 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { applyTheme } from "./lib/theme";
+
+applyTheme();
 
 // Register Service Worker for PWA & Notifications support
 if ("serviceWorker" in navigator) {

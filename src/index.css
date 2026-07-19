@@ -64,6 +64,13 @@
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
+  /* iOS-native type on phones: system font first, Inter as fallback */
+  @media (max-width: 767px) {
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", 'Inter', sans-serif;
+    }
+  }
+
   .dark {
     --background: 204 55% 8%;
     --foreground: 38 30% 94%;
@@ -114,9 +121,16 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-    padding-top: env(safe-area-inset-top);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
+  }
+
+  /* On desktop the fixed sidebar/topbar has no notch to clear; keep the old inset there.
+     On mobile the sticky glass header owns the top inset (.safe-top) so its blur fills the notch. */
+  @media (min-width: 768px) {
+    body {
+      padding-top: env(safe-area-inset-top);
+    }
   }
 
   ::selection {
@@ -168,17 +182,19 @@
   }
 
   .glass-nav {
-    background: hsl(var(--background) / 0.6);
-    backdrop-filter: blur(48px) saturate(1.6);
-    -webkit-backdrop-filter: blur(48px) saturate(1.6);
-    border: 1px solid hsl(var(--border) / 0.3);
-    box-shadow: 0 -1px 0 hsl(var(--border) / 0.15),
-                0 4px 16px hsl(var(--foreground) / 0.06);
+    background: hsl(0 0% 100% / 0.4);
+    backdrop-filter: blur(40px) saturate(1.8);
+    -webkit-backdrop-filter: blur(40px) saturate(1.8);
+    border: 1px solid hsl(0 0% 100% / 0.5);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
   .dark .glass-nav {
-    background: hsl(var(--background) / 0.5);
-    border-color: hsl(var(--border) / 0.2);
+    background: hsl(0 0% 100% / 0.1);
+    border-color: hsl(0 0% 100% / 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .glass-header {
@@ -221,9 +237,68 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
   .touch-target {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* ── iOS interaction & surface primitives ──────────── */
+
+  .pressable {
+    transition: transform 150ms ease;
+  }
+
+  .pressable:active {
+    transform: scale(0.97);
+  }
+
+  /* Retina hairlines (box-shadow renders true 0.5px; borders round up) */
+  .hairline-t {
+    box-shadow: inset 0 0.5px 0 hsl(var(--border) / 0.7);
+  }
+
+  .hairline-b {
+    box-shadow: inset 0 -0.5px 0 hsl(var(--border) / 0.7);
+  }
+
+  /* iOS Settings-style grouped inset list */
+  .inset-group {
+    border-radius: 1rem;
+    background: hsl(var(--card));
+    overflow: hidden;
+  }
+
+  .inset-group > * + * {
+    box-shadow: inset 0 0.5px 0 hsl(var(--border) / 0.6);
+  }
+
+  .inset-row {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+
+  /* iOS segmented control skin (apply to shadcn TabsList / TabsTrigger) */
+  .segmented {
+    border-radius: 10px;
+    background: hsl(var(--muted));
+    padding: 2px;
+    height: auto;
+  }
+
+  .segmented-item {
+    border-radius: 8px;
+    min-height: 32px;
+  }
+
+  .segmented-item[data-state="active"] {
+    background: hsl(var(--card));
+    box-shadow: 0 1px 3px hsl(var(--foreground) / 0.1);
   }
 
   /* ── Slide animations ──────────────────────────────── */
@@ -269,6 +344,28 @@
   .scroll-fade-x {
     mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
     -webkit-mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .page-enter,
+  .animate-slide-in-left,
+  .animate-slide-out-left,
+  .animate-fade-in,
+  .animate-fade-out {
+    animation: none;
+  }
+
+  .pressable {
+    transition: none;
+  }
+
+  .pressable:active {
+    transform: none;
   }
 }
 

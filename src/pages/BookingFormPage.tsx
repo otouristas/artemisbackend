@@ -86,6 +86,7 @@ export default function BookingFormPage() {
   const [newFeeLabel, setNewFeeLabel] = useState("");
   const [newFeeAmount, setNewFeeAmount] = useState("");
   const [isManualPrice, setIsManualPrice] = useState(false);
+  const [isReturningCustomer, setIsReturningCustomer] = useState(false);
 
   // Conflict detection state
   const [showConflictDialog, setShowConflictDialog] = useState(false);
@@ -122,9 +123,13 @@ export default function BookingFormPage() {
       setBookingSource(editBooking.booking_source || "phone");
       setPaymentMethod(editBooking.payment_method || "cash");
       try {
-        setExtraFees(editBooking.extra_fees_json ? JSON.parse(editBooking.extra_fees_json) : []);
+        const parsed = editBooking.extra_fees_json ? JSON.parse(editBooking.extra_fees_json) : [];
+        const hasDiscount = parsed.some((f: any) => f.id === 'returning-discount');
+        setIsReturningCustomer(hasDiscount);
+        setExtraFees(parsed.filter((f: any) => f.id !== 'returning-discount'));
       } catch (e) {
         setExtraFees([]);
+        setIsReturningCustomer(false);
       }
       setIsManualPrice(true);
     } else {
@@ -150,6 +155,7 @@ export default function BookingFormPage() {
       setIsDuplicate(false);
       setPaymentMethod("cash");
       setExtraFees([]);
+      setIsReturningCustomer(false);
       setIsManualPrice(false);
     }
     setIsInitialized(true);
@@ -234,7 +240,18 @@ export default function BookingFormPage() {
       id_document: idDocument || null,
       booking_source: bookingSource,
       payment_method: paymentMethod || "cash",
-      extra_fees_json: extraFees.length > 0 ? JSON.stringify(extraFees) : null,
+      extra_fees_json: (() => {
+        const payload = [...extraFees];
+        if (isReturningCustomer) {
+          const discountAmt = -Math.round(baseTotal * 0.10);
+          payload.push({
+            id: 'returning-discount',
+            label: 'Έκπτωση παλιού πελάτη (10%)',
+            amount: discountAmt
+          });
+        }
+        return payload.length > 0 ? JSON.stringify(payload) : null;
+      })(),
     };
   };
 
@@ -337,8 +354,9 @@ export default function BookingFormPage() {
   }, [selectedVehicle, checkIn, checkOut]);
 
   const baseTotal = priceBreakdown?.available ? priceBreakdown.baseTotal : 0;
+  const returningDiscount = isReturningCustomer ? -Math.round(baseTotal * 0.10) : 0;
   const feesTotal = extraFees.reduce((sum, f) => sum + f.amount, 0);
-  const autoCalculatedTotal = baseTotal + feesTotal;
+  const autoCalculatedTotal = baseTotal + feesTotal + returningDiscount;
 
   useEffect(() => {
     if (!isManualPrice && autoCalculatedTotal > 0) {
@@ -511,10 +529,19 @@ export default function BookingFormPage() {
                     <Label className="text-xs font-medium">Email</Label>
                     <Input type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="π.χ. email@example.com" />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Αρ. Ταυτότητας / Διαβατηρίου</Label>
-                    <Input value={idDocument} onChange={(e) => setIdDocument(e.target.value)} placeholder="π.χ. AK123456" />
-                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 pt-2 border-t border-border/40">
+                  <input
+                    type="checkbox"
+                    id="returning-customer"
+                    checked={isReturningCustomer}
+                    onChange={(e) => setIsReturningCustomer(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary cursor-pointer"
+                  />
+                  <Label htmlFor="returning-customer" className="text-xs font-semibold cursor-pointer select-none">
+                    Παλιός Πελάτης (Έκπτωση 10% στην αυτόματη τιμολόγηση)
+                  </Label>
                 </div>
               </div>
 
@@ -808,6 +835,12 @@ export default function BookingFormPage() {
                           <span>Βασική τιμή:</span>
                           <span>{baseTotal}€</span>
                         </div>
+                        {isReturningCustomer && (
+                          <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                            <span>Έκπτωση παλιού πελάτη (10%):</span>
+                            <span>{returningDiscount}€</span>
+                          </div>
+                        )}
                         {extraFees.length > 0 && (
                           <div className="flex justify-between text-muted-foreground">
                             <span>Πρόσθετες χρεώσεις:</span>
