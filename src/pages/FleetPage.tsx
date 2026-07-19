@@ -45,7 +45,7 @@ export default function FleetPage() {
   const deleteBlock = useDeleteVehicleBlock();
 
   const [selectedId, setSelectedId] = useState<string | null>(selectedFromUrl);
-  const [plate, setPlate] = useState("");
+  const [plates, setPlates] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
   const [blockOpen, setBlockOpen] = useState(false);
@@ -104,7 +104,13 @@ export default function FleetPage() {
     setSelectedId(id);
     const v = vehicles.find((x) => x.id === id);
     if (v) {
-      setPlate(v.plate ?? "");
+      const qty = v.quantity ?? 1;
+      // Initialise per-unit plates: prefer plates[], fall back to legacy plate field
+      const existing: string[] = v.plates && v.plates.length > 0
+        ? v.plates
+        : v.plate ? [v.plate] : [];
+      const padded = Array.from({ length: qty }, (_, i) => existing[i] ?? "");
+      setPlates(padded);
       setNotes(v.notes ?? "");
       setQuantity(v.quantity ?? 1);
     }
@@ -113,9 +119,12 @@ export default function FleetPage() {
   const saveVehicle = async () => {
     if (!selected) return;
     try {
+      const cleanPlates = plates.map((p) => p.trim());
       await updateVehicle.mutateAsync({
         id: selected.id,
-        plate: plate || null,
+        // keep legacy plate as first plate for backwards compat
+        plate: cleanPlates[0] || null,
+        plates: cleanPlates.some(Boolean) ? cleanPlates : null,
         notes: notes || null,
         quantity: quantity,
       });
@@ -166,9 +175,22 @@ export default function FleetPage() {
             {selected.type === "car" ? "Αυτοκίνητο" : "Scooter"} · {selected.cc}cc · x{selected.quantity ?? 1}
           </p>
         </div>
-        <div className="space-y-1.5">
-          <Label>Πινακίδα / ID</Label>
-          <Input value={plate} onChange={(e) => setPlate(e.target.value)} />
+        <div className="space-y-2">
+          <Label>Πινακίδες ανά μονάδα</Label>
+          {Array.from({ length: quantity }, (_, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground w-14 shrink-0">Μονάδα {i + 1}</span>
+              <Input
+                value={plates[i] ?? ""}
+                placeholder="π.χ. ΑΜΗ1234"
+                onChange={(e) => {
+                  const next = [...plates];
+                  next[i] = e.target.value;
+                  setPlates(next);
+                }}
+              />
+            </div>
+          ))}
         </div>
         <div className="space-y-1.5">
           <Label>Ποσότητα (Στόλος)</Label>
@@ -176,7 +198,12 @@ export default function FleetPage() {
             type="number"
             min={1}
             value={quantity}
-            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+            onChange={(e) => {
+              const next = Math.max(1, parseInt(e.target.value) || 1);
+              setQuantity(next);
+              // resize plates array when quantity changes
+              setPlates((prev) => Array.from({ length: next }, (_, i) => prev[i] ?? ""));
+            }}
           />
         </div>
         <div className="space-y-1.5">
@@ -339,7 +366,12 @@ export default function FleetPage() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">
                       {v.cc}cc · {v.daily_rate_low}–{v.daily_rate_high}€/ημ.
-                      {v.plate ? ` · ${v.plate}` : ""}
+                      {(() => {
+                        const allPlates = v.plates && v.plates.some(Boolean)
+                          ? v.plates.filter(Boolean)
+                          : v.plate ? [v.plate] : [];
+                        return allPlates.length > 0 ? ` · ${allPlates.join(", ")}` : "";
+                      })()}
                       {(v.quantity ?? 1) > 1 ? ` · x${v.quantity}` : ""}
                     </p>
                   </div>
