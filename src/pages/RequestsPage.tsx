@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isBefore, isAfter } from "date-fns";
 import { el } from "date-fns/locale";
 import {
   Plus,
@@ -11,6 +11,8 @@ import {
   X,
   Pencil,
   Inbox,
+  Bike,
+  LayoutGrid,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -50,8 +52,11 @@ import {
   type BookingRequest,
   type BookingRequestInsert,
 } from "@/hooks/useBookingRequests";
+import { useVehicles, type Vehicle } from "@/hooks/useVehicles";
+import { useBookings } from "@/hooks/useBookings";
 
 type FilterKey = "new" | "all" | "accepted" | "rejected" | "reviewed";
+type VehicleTypeFilter = "all" | "car" | "scooter";
 
 type FormState = {
   customer_name: string;
@@ -133,9 +138,42 @@ function toInsert(form: FormState): BookingRequestInsert {
   };
 }
 
+function datesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
+  return isBefore(aStart, bEnd) && isAfter(aEnd, bStart);
+}
+
+function matchVehicleId(requested: string | null | undefined, vehicles: Vehicle[]): string {
+  if (!requested?.trim()) return "";
+  const q = requested.trim().toLowerCase().replace(/[-_]/g, " ");
+  const exact = vehicles.find((v) => v.name.toLowerCase() === q);
+  if (exact) return exact.id;
+  const partial = vehicles.find(
+    (v) => v.name.toLowerCase().includes(q) || q.includes(v.name.toLowerCase()),
+  );
+  return partial?.id ?? "";
+}
+
+function freeUnitsForVehicle(
+  vehicle: Vehicle,
+  checkIn: string,
+  checkOut: string,
+  bookings: { vehicle_id: string; check_in: string; check_out: string; status: string }[],
+): number {
+  if (!checkIn || !checkOut) return vehicle.quantity ?? 1;
+  const start = parseISO(checkIn);
+  const end = parseISO(checkOut);
+  const conflicts = bookings.filter((b) => {
+    if (b.vehicle_id !== vehicle.id || b.status === "cancelled") return false;
+    return datesOverlap(start, end, parseISO(b.check_in), parseISO(b.check_out));
+  });
+  return Math.max(0, (vehicle.quantity ?? 1) - conflicts.length);
+}
+
 export default function RequestsPage() {
   const navigate = useNavigate();
   const { data: requests = [], isLoading } = useBookingRequests();
+  const { data: vehicles = [] } = useVehicles();
+  const { data: bookings = [] } = useBookings();
   const createRequest = useCreateBookingRequest();
   const updateRequest = useUpdateBookingRequest();
   const rejectRequest = useRejectBookingRequest();
@@ -145,6 +183,21 @@ export default function RequestsPage() {
   const [editing, setEditing] = useState<BookingRequest | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [rejectTarget, setRejectTarget] = useState<BookingRequest | null>(null);
+
+  // Edit-form vehicle type filter + selected fleet id
+  const [editTypeFilter, setEditTypeFilter] = useState<VehicleTypeFilter>("all");
+  const [editFleetId, setEditFleetId] = useState("");
+
+  // Accept dialog: pick alternate vehicle / type
+  const [acceptTarget, setAcceptTarget] = useState<BookingRequest | null>(null);
+  const [acceptTypeFilter, setAcceptTypeFilter] = useState<VehicleTypeFilter>("all");
+  const [acceptVehicleId, setAcceptVehicleId] = useState("");
+  const [acceptSaving, setAcceptSaving] = useState(false);
+
+  const activeVehicles = useMemo(
+    () => vehicles.filter((v) => v.active !== false),
+    [vehicles],
+  );
 
   const counts = useMemo(() => {
     const c = { new: 0, all: requests.length, accepted: 0, rejected: 0, reviewed: 0 };
@@ -162,16 +215,49 @@ export default function RequestsPage() {
     return requests.filter((r) => r.status === filter);
   }, [requests, filter]);
 
+  const editFleetOptions = useMemo(() => {
+    if (editTypeFilter === "all") return activeVehicles;
+    return activeVehicles.filter((v) => v.type === editTypeFilter);
+  }, [activeVehicles, editTypeFilter]);
+
+  const acceptFleetOptions = useMemo(() => {
+    const list =
+      acceptTypeFilter === "all"
+        ? activeVehicles
+        : activeVehicles.filter((v) => v.type === acceptTypeFilter);
+    if (!acceptTarget) return list;
+    return [...list].sort((a, b) => {
+      const fa = freeUnitsForVehicle(a, acceptTarget.check_in, acceptTarget.check_out, bookings);
+      const fb = freeUnitsForVehicle(b, acceptTarget.check_in, acceptTarget.check_out, bookings);
+      return fb - fa;
+    });
+  }, [activeVehicles, acceptTypeFilter, acceptTarget, bookings]);
+
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm());
+    setEditTypeFilter("all");
+    setEditFleetId("");
     setDialogOpen(true);
   };
 
   const openEdit = (r: BookingRequest) => {
     setEditing(r);
-    setForm(formFromRequest(r.status === "new" ? { ...r, status: "reviewed" } : r));
+    const next = formFromRequest(r.status === "new" ? { ...r, status: "reviewed" } : r);
+    setForm(next);
+    const matched = matchVehicleId(r.requested_vehicle, activeVehicles);
+    setEditFleetId(matched);
+    const matchedVehicle = activeVehicles.find((v) => v.id === matched);
+    setEditTypeFilter(matchedVehicle?.type ?? "all");
     setDialogOpen(true);
+  };
+
+  const openAccept = (r: BookingRequest) => {
+    const matched = matchVehicleId(r.requested_vehicle, activeVehicles);
+    const matchedVehicle = activeVehicles.find((v) => v.id === matched);
+    setAcceptTarget(r);
+    setAcceptTypeFilter(matchedVehicle?.type ?? "all");
+    setAcceptVehicleId(matched);
   };
 
   const handleSave = async () => {
@@ -185,7 +271,11 @@ export default function RequestsPage() {
         await updateRequest.mutateAsync({ id: editing.id, ...payload });
         toast.success("Το αίτημα ενημερώθηκε");
       } else {
-        await createRequest.mutateAsync({ ...payload, status: "new", source: payload.source || "manual" });
+        await createRequest.mutateAsync({
+          ...payload,
+          status: "new",
+          source: payload.source || "manual",
+        });
         toast.success("Το αίτημα δημιουργήθηκε");
       }
       setDialogOpen(false);
@@ -207,6 +297,42 @@ export default function RequestsPage() {
     });
   };
 
+  const handleAcceptContinue = async () => {
+    if (!acceptTarget || !acceptVehicleId) {
+      toast.error("Επιλέξτε όχημα στόλου");
+      return;
+    }
+    const vehicle = activeVehicles.find((v) => v.id === acceptVehicleId);
+    if (!vehicle) return;
+
+    setAcceptSaving(true);
+    try {
+      // Persist reassignment so the request shows the chosen fleet model
+      if (acceptTarget.requested_vehicle !== vehicle.name) {
+        await updateRequest.mutateAsync({
+          id: acceptTarget.id,
+          requested_vehicle: vehicle.name,
+          status: acceptTarget.status === "new" ? "reviewed" : acceptTarget.status,
+          admin_notes: [
+            acceptTarget.admin_notes?.trim(),
+            acceptTarget.requested_vehicle &&
+            acceptTarget.requested_vehicle !== vehicle.name
+              ? `Αλλαγή οχήματος: ${acceptTarget.requested_vehicle} → ${vehicle.name}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        });
+      }
+      setAcceptTarget(null);
+      navigate(`/booking/new?requestId=${acceptTarget.id}&vehicleId=${vehicle.id}`);
+    } catch {
+      toast.error("Σφάλμα ενημέρωσης αιτήματος");
+    } finally {
+      setAcceptSaving(false);
+    }
+  };
+
   const tabs: { key: FilterKey; label: string }[] = [
     { key: "new", label: "Νέα" },
     { key: "reviewed", label: "Ελεγμένα" },
@@ -215,9 +341,25 @@ export default function RequestsPage() {
     { key: "all", label: "Όλα" },
   ];
 
+  const typeTabs: { key: VehicleTypeFilter; label: string; icon: typeof Car }[] = [
+    { key: "all", label: "Όλα", icon: LayoutGrid },
+    { key: "car", label: "Αυτοκίνητα", icon: Car },
+    { key: "scooter", label: "Scooter", icon: Bike },
+  ];
+
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
+
+  // Keep form.requested_vehicle in sync when picking from fleet in edit dialog
+  useEffect(() => {
+    if (!dialogOpen || !editFleetId) return;
+    const v = activeVehicles.find((x) => x.id === editFleetId);
+    if (v && form.requested_vehicle !== v.name) {
+      setField("requested_vehicle", v.name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editFleetId, dialogOpen]);
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 md:py-6">
@@ -271,11 +413,17 @@ export default function RequestsPage() {
         <div className="space-y-2">
           {filtered.map((r) => {
             const canAccept = r.status === "new" || r.status === "reviewed";
+            const matchedId = matchVehicleId(r.requested_vehicle, activeVehicles);
+            const free = matchedId
+              ? freeUnitsForVehicle(
+                  activeVehicles.find((v) => v.id === matchedId)!,
+                  r.check_in,
+                  r.check_out,
+                  bookings,
+                )
+              : null;
             return (
-              <div
-                key={r.id}
-                className="rounded-xl border bg-card px-4 py-3.5 space-y-3"
-              >
+              <div key={r.id} className="rounded-xl border bg-card px-4 py-3.5 space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -289,6 +437,14 @@ export default function RequestsPage() {
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                         {SOURCE_LABELS[r.source] ?? r.source}
                       </Badge>
+                      {free === 0 && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0 bg-destructive/10 text-destructive border-destructive/30"
+                        >
+                          Μη διαθέσιμο
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       {r.customer_phone && (
@@ -307,6 +463,11 @@ export default function RequestsPage() {
                         <span className="inline-flex items-center gap-1">
                           <Car className="h-3 w-3" />
                           {r.requested_vehicle}
+                          {free != null && (
+                            <span className={cn(free === 0 ? "text-destructive font-medium" : "")}>
+                              · {free} διαθέσ.
+                            </span>
+                          )}
                         </span>
                       )}
                     </div>
@@ -333,7 +494,7 @@ export default function RequestsPage() {
                     <Button
                       size="sm"
                       className="gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90"
-                      onClick={() => navigate(`/booking/new?requestId=${r.id}`)}
+                      onClick={() => openAccept(r)}
                     >
                       <Check className="h-3.5 w-3.5" />
                       Αποδοχή
@@ -370,6 +531,7 @@ export default function RequestsPage() {
         </div>
       )}
 
+      {/* Edit / create dialog */}
       <ResponsiveDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <ResponsiveDialogContent className="max-h-[90vh] overflow-y-auto">
           <ResponsiveDialogHeader>
@@ -420,14 +582,67 @@ export default function RequestsPage() {
                 />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Προτιμώμενο όχημα</Label>
+
+            <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+              <Label>Όχημα στόλου (μπορείτε να αλλάξετε τύπο)</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {typeTabs.map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => {
+                      setEditTypeFilter(t.key);
+                      setEditFleetId("");
+                    }}
+                    className={cn(
+                      "pressable inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                      editTypeFilter === t.key
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    <t.icon className="h-3 w-3" />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <Select
+                value={editFleetId || undefined}
+                onValueChange={(id) => {
+                  setEditFleetId(id);
+                  const v = activeVehicles.find((x) => x.id === id);
+                  if (v) setField("requested_vehicle", v.name);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Επιλέξτε από τον στόλο…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {editFleetOptions.map((v) => {
+                    const free =
+                      form.check_in && form.check_out
+                        ? freeUnitsForVehicle(v, form.check_in, form.check_out, bookings)
+                        : null;
+                    return (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name} ({v.type === "scooter" ? "scooter" : "αυτ."})
+                        {free != null ? ` · ${free} διαθέσ.` : ""}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
               <Input
                 value={form.requested_vehicle}
-                onChange={(e) => setField("requested_vehicle", e.target.value)}
-                placeholder="π.χ. Suzuki Ignis"
+                onChange={(e) => {
+                  setField("requested_vehicle", e.target.value);
+                  setEditFleetId("");
+                }}
+                placeholder="Ή πληκτρολογήστε ελεύθερα (π.χ. slug από site)"
+                className="text-sm"
               />
             </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Παραλαβή</Label>
@@ -551,6 +766,130 @@ export default function RequestsPage() {
               variant="outline"
               onClick={() => setDialogOpen(false)}
               className="coarse:h-12 coarse:rounded-xl coarse:text-base"
+            >
+              Ακύρωση
+            </Button>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+
+      {/* Accept: choose / change vehicle type & model */}
+      <ResponsiveDialog
+        open={!!acceptTarget}
+        onOpenChange={(open) => !open && setAcceptTarget(null)}
+      >
+        <ResponsiveDialogContent className="max-h-[90vh] overflow-y-auto">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="font-display">
+              Αποδοχή · επιλογή οχήματος
+            </ResponsiveDialogTitle>
+          </ResponsiveDialogHeader>
+          {acceptTarget && (
+            <div className="space-y-3">
+              <div className="rounded-lg border bg-muted/30 px-3 py-2.5 text-sm space-y-1">
+                <p className="font-medium">{acceptTarget.customer_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {format(parseISO(acceptTarget.check_in), "d MMM yyyy", { locale: el })}
+                  {" → "}
+                  {format(parseISO(acceptTarget.check_out), "d MMM yyyy", { locale: el })}
+                </p>
+                {acceptTarget.requested_vehicle && (
+                  <p className="text-xs">
+                    Αρχικό αίτημα:{" "}
+                    <span className="font-semibold">{acceptTarget.requested_vehicle}</span>
+                    {" — "}αν δεν υπάρχει διαθεσιμότητα, αλλάξτε τύπο ή μοντέλο παρακάτω.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {typeTabs.map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => {
+                      setAcceptTypeFilter(t.key);
+                      setAcceptVehicleId("");
+                    }}
+                    className={cn(
+                      "pressable inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",
+                      acceptTypeFilter === t.key
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    <t.icon className="h-3.5 w-3.5" />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                {acceptFleetOptions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    Δεν υπάρχουν οχήματα σε αυτή την κατηγορία.
+                  </p>
+                ) : (
+                  acceptFleetOptions.map((v) => {
+                    const free = freeUnitsForVehicle(
+                      v,
+                      acceptTarget.check_in,
+                      acceptTarget.check_out,
+                      bookings,
+                    );
+                    const selected = acceptVehicleId === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setAcceptVehicleId(v.id)}
+                        className={cn(
+                          "w-full text-left rounded-xl border px-3 py-2.5 transition-colors",
+                          selected
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:bg-muted/40",
+                          free === 0 && !selected && "opacity-70",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold">{v.name}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {v.type === "scooter" ? "Scooter" : "Αυτοκίνητο"} · {v.cc}cc
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] shrink-0",
+                              free === 0
+                                ? "bg-destructive/10 text-destructive border-destructive/30"
+                                : "bg-success/10 text-success border-success/30",
+                            )}
+                          >
+                            {free === 0 ? "Πλήρες" : `${free} διαθέσ.`}
+                          </Badge>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+          <ResponsiveDialogFooter>
+            <Button
+              onClick={() => void handleAcceptContinue()}
+              disabled={!acceptVehicleId || acceptSaving}
+              className="gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90 coarse:h-12 coarse:rounded-xl"
+            >
+              <Check className="h-4 w-4" />
+              Συνέχεια στη κράτηση
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setAcceptTarget(null)}
+              className="coarse:h-12 coarse:rounded-xl"
             >
               Ακύρωση
             </Button>

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { format, differenceInDays, parseISO, isBefore, isAfter } from "date-fns";
 import { el } from "date-fns/locale";
-import { CalendarIcon, MessageCircle, Sparkles, Loader2, AlertTriangle, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, MessageCircle, Sparkles, Loader2, AlertTriangle, ArrowLeft, Plus, Trash2, Car, Bike, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculateSeasonalPrice } from "@/lib/seasonRates";
 import { Button } from "@/components/ui/button";
@@ -103,6 +103,7 @@ export default function BookingFormPage() {
   const [idDocument, setIdDocument] = useState("");
   const [bookingSource, setBookingSource] = useState("phone");
   const [isDuplicate, setIsDuplicate] = useState(false);
+  const [vehicleTypeFilter, setVehicleTypeFilter] = useState<"all" | "car" | "scooter">("all");
 
   // Rates, extras, and payment method state
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
@@ -184,8 +185,16 @@ export default function BookingFormPage() {
       setCustomerName(sourceRequest.customer_name);
       setCustomerPhone(sourceRequest.customer_phone || "");
       setCustomerEmail(sourceRequest.customer_email || "");
-      setVehicleId(matchVehicleId(sourceRequest.requested_vehicle, vehicles));
+      setVehicleId(
+        defaultVehicleId || matchVehicleId(sourceRequest.requested_vehicle, vehicles),
+      );
       setAssignedPlate("");
+      {
+        const chosenId =
+          defaultVehicleId || matchVehicleId(sourceRequest.requested_vehicle, vehicles);
+        const chosen = vehicles.find((v) => v.id === chosenId);
+        setVehicleTypeFilter(chosen?.type ?? "all");
+      }
       setCheckIn(parseISO(sourceRequest.check_in));
       setCheckOut(parseISO(sourceRequest.check_out));
       setComments(commentParts.join("\n") || "");
@@ -261,6 +270,12 @@ export default function BookingFormPage() {
   }, [vehicleId, checkIn, checkOut, bookings, editBooking, isDuplicate]);
 
   const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
+
+  const filteredVehicles = useMemo(() => {
+    const active = vehicles.filter((v) => v.active !== false);
+    if (vehicleTypeFilter === "all") return active;
+    return active.filter((v) => v.type === vehicleTypeFilter);
+  }, [vehicles, vehicleTypeFilter]);
 
   // Individual unit plates of the selected fleet type (comma-separated in vehicles.plate)
   const vehiclePlates = useMemo(
@@ -675,6 +690,50 @@ export default function BookingFormPage() {
               {/* Booking Info Card */}
               <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
                 <h2 className="font-display text-lg">Όχημα και ημερομηνίες</h2>
+                {sourceRequest && (
+                  <div className="rounded-lg border border-accent/30 bg-accent/5 px-3 py-2.5 text-xs text-muted-foreground">
+                    Αρχικό αίτημα:{" "}
+                    <span className="font-semibold text-foreground">
+                      {sourceRequest.requested_vehicle || "χωρίς προτίμηση"}
+                    </span>
+                    . Αν δεν υπάρχει διαθεσιμότητα, αλλάξτε τύπο (αυτοκίνητο / scooter) και μοντέλο.
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      { key: "all" as const, label: "Όλα", icon: LayoutGrid },
+                      { key: "car" as const, label: "Αυτοκίνητα", icon: Car },
+                      { key: "scooter" as const, label: "Scooter", icon: Bike },
+                    ] as const
+                  ).map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => {
+                        setVehicleTypeFilter(t.key);
+                        if (
+                          vehicleId &&
+                          t.key !== "all" &&
+                          selectedVehicle &&
+                          selectedVehicle.type !== t.key
+                        ) {
+                          setVehicleId("");
+                          setAssignedPlate("");
+                        }
+                      }}
+                      className={cn(
+                        "pressable inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",
+                        vehicleTypeFilter === t.key
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      <t.icon className="h-3.5 w-3.5" />
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Όχημα *</Label>
@@ -688,7 +747,7 @@ export default function BookingFormPage() {
                     >
                       <SelectTrigger><SelectValue placeholder="Επιλέξτε όχημα" /></SelectTrigger>
                       <SelectContent>
-                        {vehicles.map((v) => (
+                        {filteredVehicles.map((v) => (
                           <SelectItem key={v.id} value={v.id}>
                             {v.name} ({v.cc}cc)
                           </SelectItem>
