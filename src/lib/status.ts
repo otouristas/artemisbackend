@@ -19,6 +19,24 @@ export const SOURCE_LABELS: Record<string, string> = {
   walkin: "Walk-in",
   online: "Online",
   email: "Email",
+  website: "Ιστότοπος",
+  touristas: "Touristas",
+  manual: "Χειροκίνητο",
+  api: "API",
+};
+
+export const REQUEST_STATUS_LABELS: Record<string, string> = {
+  new: "Νέο",
+  reviewed: "Ελεγμένο",
+  accepted: "Αποδεκτό",
+  rejected: "Απορρίφθηκε",
+};
+
+export const REQUEST_STATUS_CHIP: Record<string, string> = {
+  new: "bg-warning/15 text-warning border-warning/30",
+  reviewed: "bg-primary/10 text-primary border-primary/20",
+  accepted: "bg-success/15 text-success border-success/30",
+  rejected: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
 export function clientInitials(name: string): string {

@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import TodayPage from "./pages/TodayPage.tsx";
 import BookingsPage from "./pages/BookingsPage.tsx";
+import RequestsPage from "./pages/RequestsPage.tsx";
 import ClientsPage from "./pages/ClientsPage.tsx";
 import ClientProfilePage from "./pages/ClientProfilePage.tsx";
 import FleetPage from "./pages/FleetPage.tsx";
@@ -33,6 +34,7 @@ const App = () => (
               <Route element={<AppShell />}>
                 <Route path="/" element={<TodayPage />} />
                 <Route path="/bookings" element={<BookingsPage />} />
+                <Route path="/requests" element={<RequestsPage />} />
                 <Route path="/clients" element={<ClientsPage />} />
                 <Route path="/clients/:id" element={<ClientProfilePage />} />
                 <Route path="/fleet" element={<FleetPage />} />

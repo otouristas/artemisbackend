@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_requests: {
+        Row: {
+          admin_notes: string | null
+          arrival_info: string | null
+          booking_id: string | null
+          check_in: string
+          check_out: string
+          child_seat: boolean
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          estimated_total: number | null
+          id: string
+          locale: string | null
+          message: string | null
+          party_size: number | null
+          pickup_location: string | null
+          requested_vehicle: string | null
+          return_location: string | null
+          source: string
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          arrival_info?: string | null
+          booking_id?: string | null
+          check_in: string
+          check_out: string
+          child_seat?: boolean
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          estimated_total?: number | null
+          id?: string
+          locale?: string | null
+          message?: string | null
+          party_size?: number | null
+          pickup_location?: string | null
+          requested_vehicle?: string | null
+          return_location?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          arrival_info?: string | null
+          booking_id?: string | null
+          check_in?: string
+          check_out?: string
+          child_seat?: boolean
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          estimated_total?: number | null
+          id?: string
+          locale?: string | null
+          message?: string | null
+          party_size?: number | null
+          pickup_location?: string | null
+          requested_vehicle?: string | null
+          return_location?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_requests_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           booking_source: string | null
@@ -284,6 +364,7 @@ export type Database = {
     Enums: {
       booking_status: "pending" | "confirmed" | "cancelled"
       checklist_type: "check_in" | "check_out"
+      request_status: "new" | "reviewed" | "accepted" | "rejected"
       vehicle_type: "car" | "scooter"
     }
     CompositeTypes: {
@@ -414,6 +495,7 @@ export const Constants = {
     Enums: {
       booking_status: ["pending", "confirmed", "cancelled"],
       checklist_type: ["check_in", "check_out"],
+      request_status: ["new", "reviewed", "accepted", "rejected"],
       vehicle_type: ["car", "scooter"],
     },
   },

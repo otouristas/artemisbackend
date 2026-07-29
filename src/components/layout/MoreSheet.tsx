@@ -1,11 +1,12 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Users, Wallet, BarChart3, Bell, BellOff, LogOut, ChevronRight, Sun, Moon, Monitor } from "lucide-react";
+import { Users, Wallet, BarChart3, Bell, BellOff, LogOut, ChevronRight, Sun, Moon, Monitor, Inbox } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { getPref, setPref, type ThemePref } from "@/lib/theme";
 
 const navRows = [
+  { to: "/requests", label: "Αιτήματα", icon: Inbox },
   { to: "/clients", label: "Πελάτες", icon: Users },
   { to: "/money", label: "Οικονομικά", icon: Wallet },
   { to: "/insights", label: "Στατιστικά", icon: BarChart3 },
@@ -25,6 +26,7 @@ interface MoreSheetProps {
   notificationPermission: NotificationPermission;
   onRequestNotifications: () => void;
   onSignOut: () => void;
+  newRequestCount?: number;
 }
 
 export function MoreSheet({
@@ -33,6 +35,7 @@ export function MoreSheet({
   notificationPermission,
   onRequestNotifications,
   onSignOut,
+  newRequestCount = 0,
 }: MoreSheetProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -72,6 +75,11 @@ export function MoreSheet({
                   <span className={cn("flex-1 text-[15px]", active ? "font-semibold text-primary" : "font-medium")}>
                     {row.label}
                   </span>
+                  {row.to === "/requests" && newRequestCount > 0 && (
+                    <span className="rounded-full bg-accent text-accent-foreground text-[10px] font-bold min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center">
+                      {newRequestCount > 99 ? "99+" : newRequestCount}
+                    </span>
+                  )}
                   <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
                 </button>
               );

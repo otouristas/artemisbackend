@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Bell,
   BellOff,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,19 +21,21 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommandPalette } from "@/components/CommandPalette";
 import { MoreSheet } from "@/components/layout/MoreSheet";
 import { useScrolled } from "@/hooks/use-scrolled";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import { useBookingRequests } from "@/hooks/useBookingRequests";
 
 const navItems = [
   { to: "/", label: "Σήμερα", icon: LayoutDashboard, end: true },
   { to: "/bookings", label: "Κρατήσεις", icon: CalendarDays },
+  { to: "/requests", label: "Αιτήματα", icon: Inbox },
   { to: "/clients", label: "Πελάτες", icon: Users },
   { to: "/fleet", label: "Στόλος", icon: Car },
   { to: "/money", label: "Οικονομικά", icon: Wallet },
   { to: "/insights", label: "Στατιστικά", icon: BarChart3 },
 ];
 
-const moreRoutes = ["/clients", "/money", "/insights"];
+const moreRoutes = ["/requests", "/clients", "/money", "/insights"];
 
 export function AppShell() {
   const { signOut } = useAuth();
@@ -41,6 +44,11 @@ export function AppShell() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   const scrolled = useScrolled(32);
+  const { data: bookingRequests = [] } = useBookingRequests();
+  const newRequestCount = useMemo(
+    () => bookingRequests.filter((r) => r.status === "new").length,
+    [bookingRequests],
+  );
 
   useEffect(() => {
     if ("Notification" in window) {
@@ -130,7 +138,12 @@ export function AppShell() {
               }
             >
               <item.icon className="h-4 w-4 shrink-0" />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.to === "/requests" && newRequestCount > 0 && (
+                <span className="ml-auto rounded-full bg-accent text-accent-foreground text-[10px] font-bold min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center">
+                  {newRequestCount > 99 ? "99+" : newRequestCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -301,7 +314,14 @@ export function AppShell() {
               {(moreActive || moreOpen) && (
                 <span className="absolute inset-0 rounded-2xl bg-primary/10 dark:bg-primary/20" />
               )}
-              <MoreHorizontal className="relative h-5 w-5" strokeWidth={moreActive || moreOpen ? 2.5 : 1.8} />
+              <span className="relative">
+                <MoreHorizontal className="h-5 w-5" strokeWidth={moreActive || moreOpen ? 2.5 : 1.8} />
+                {newRequestCount > 0 && (
+                  <span className="absolute -top-1 -right-2 rounded-full bg-accent text-accent-foreground text-[9px] font-bold min-w-[14px] h-3.5 px-0.5 flex items-center justify-center">
+                    {newRequestCount > 9 ? "9+" : newRequestCount}
+                  </span>
+                )}
+              </span>
               <span className="relative">Περισσότερα</span>
             </button>
           </nav>
@@ -314,6 +334,7 @@ export function AppShell() {
         notificationPermission={notificationPermission}
         onRequestNotifications={() => void requestNotificationPermission()}
         onSignOut={() => void signOut()}
+        newRequestCount={newRequestCount}
       />
 
       <CommandPalette />

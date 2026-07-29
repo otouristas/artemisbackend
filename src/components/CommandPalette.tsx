@@ -13,7 +13,7 @@ import {
 import { useBookings } from "@/hooks/useBookings";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useClients } from "@/hooks/useClients";
-import { CalendarDays, Car, Search, Users, Wallet, LayoutDashboard, BarChart3 } from "lucide-react";
+import { CalendarDays, Car, Search, Users, Wallet, LayoutDashboard, BarChart3, Inbox } from "lucide-react";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -56,6 +56,10 @@ export function CommandPalette() {
           <CommandItem onSelect={() => go("/bookings")}>
             <CalendarDays className="mr-2 h-4 w-4" />
             Κρατήσεις
+          </CommandItem>
+          <CommandItem onSelect={() => go("/requests")}>
+            <Inbox className="mr-2 h-4 w-4" />
+            Αιτήματα
           </CommandItem>
           <CommandItem onSelect={() => go("/clients")}>
             <Users className="mr-2 h-4 w-4" />

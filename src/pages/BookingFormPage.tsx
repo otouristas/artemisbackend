@@ -32,11 +32,26 @@ import { BookingReceipt } from "@/components/BookingReceipt";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useBookings, useCreateBooking, useUpdateBooking, useDeleteBooking } from "@/hooks/useBookings";
 import { useClients } from "@/hooks/useClients";
+import { useBookingRequests, useUpdateBookingRequest } from "@/hooks/useBookingRequests";
 import { STATUS_LABELS, SOURCE_LABELS } from "@/lib/status";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function datesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return isBefore(aStart, bEnd) && isAfter(aEnd, bStart);
+}
+
+function matchVehicleId(
+  requested: string | null | undefined,
+  vehicles: { id: string; name: string }[],
+): string {
+  if (!requested?.trim()) return "";
+  const q = requested.trim().toLowerCase().replace(/[-_]/g, " ");
+  const exact = vehicles.find((v) => v.name.toLowerCase() === q);
+  if (exact) return exact.id;
+  const partial = vehicles.find(
+    (v) => v.name.toLowerCase().includes(q) || q.includes(v.name.toLowerCase()),
+  );
+  return partial?.id ?? "";
 }
 
 export default function BookingFormPage() {
@@ -47,14 +62,22 @@ export default function BookingFormPage() {
   const { data: vehicles = [], isLoading: loadingVehicles } = useVehicles();
   const { data: bookings = [], isLoading: loadingBookings } = useBookings();
   const { data: clients = [] } = useClients();
+  const { data: bookingRequests = [], isLoading: loadingRequests } = useBookingRequests();
   const createBooking = useCreateBooking();
   const updateBooking = useUpdateBooking();
   const deleteBooking = useDeleteBooking();
+  const updateBookingRequest = useUpdateBookingRequest();
 
   const editBooking = useMemo(() => {
     if (!id) return null;
     return bookings.find((b) => b.id === id) || null;
   }, [id, bookings]);
+
+  const requestId = searchParams.get("requestId") || undefined;
+  const sourceRequest = useMemo(() => {
+    if (!requestId) return null;
+    return bookingRequests.find((r) => r.id === requestId) || null;
+  }, [requestId, bookingRequests]);
 
   const defaultVehicleId = searchParams.get("vehicleId") || undefined;
   const defaultClientId = searchParams.get("clientId") || undefined;
@@ -100,7 +123,7 @@ export default function BookingFormPage() {
   // Tracks if the component has initialized fields from editBooking/params
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const isLoading = loadingVehicles || loadingBookings;
+  const isLoading = loadingVehicles || loadingBookings || (!!requestId && loadingRequests);
 
   useEffect(() => {
     if (isLoading) return;
@@ -141,6 +164,46 @@ export default function BookingFormPage() {
         setDiscountAmount("");
       }
       setIsManualPrice(true);
+    } else if (sourceRequest) {
+      const commentParts = [
+        sourceRequest.message?.trim(),
+        sourceRequest.arrival_info?.trim()
+          ? `Άφιξη: ${sourceRequest.arrival_info.trim()}`
+          : null,
+        sourceRequest.child_seat ? "Παιδικό κάθισμα" : null,
+        sourceRequest.party_size ? `Άτομα: ${sourceRequest.party_size}` : null,
+        sourceRequest.requested_vehicle
+          ? `Αίτημα οχήματος: ${sourceRequest.requested_vehicle}`
+          : null,
+        sourceRequest.admin_notes?.trim()
+          ? `Σημειώσεις: ${sourceRequest.admin_notes.trim()}`
+          : null,
+      ].filter(Boolean);
+
+      setClientId(null);
+      setCustomerName(sourceRequest.customer_name);
+      setCustomerPhone(sourceRequest.customer_phone || "");
+      setCustomerEmail(sourceRequest.customer_email || "");
+      setVehicleId(matchVehicleId(sourceRequest.requested_vehicle, vehicles));
+      setAssignedPlate("");
+      setCheckIn(parseISO(sourceRequest.check_in));
+      setCheckOut(parseISO(sourceRequest.check_out));
+      setComments(commentParts.join("\n") || "");
+      setPaymentNotes("");
+      setStatus("pending");
+      setDeliveryLocation(sourceRequest.pickup_location || "");
+      setDepositAmount("0");
+      setTotalPrice(
+        sourceRequest.estimated_total != null ? String(sourceRequest.estimated_total) : "",
+      );
+      setIdDocument("");
+      setBookingSource("online");
+      setIsDuplicate(false);
+      setPaymentMethod("cash");
+      setExtraFees([]);
+      setIsReturningCustomer(false);
+      setDiscountAmount("");
+      setIsManualPrice(sourceRequest.estimated_total != null);
     } else {
       const fromClient = defaultClientId
         ? clients.find((c) => c.id === defaultClientId)
@@ -169,7 +232,17 @@ export default function BookingFormPage() {
       setIsManualPrice(false);
     }
     setIsInitialized(true);
-  }, [editBooking, defaultVehicleId, defaultClientId, defaultDate, isLoading, isInitialized, clients]);
+  }, [
+    editBooking,
+    sourceRequest,
+    defaultVehicleId,
+    defaultClientId,
+    defaultDate,
+    isLoading,
+    isInitialized,
+    clients,
+    vehicles,
+  ]);
 
   // Compute conflicting bookings for the selected vehicle + dates
   const conflictingBookings = useMemo(() => {
@@ -299,7 +372,23 @@ export default function BookingFormPage() {
       );
     } else {
       createBooking.mutate(data, {
-          onSuccess: () => {
+          onSuccess: (created) => {
+            if (requestId) {
+              updateBookingRequest.mutate(
+                {
+                  id: requestId,
+                  status: "accepted",
+                  booking_id: created.id,
+                },
+                {
+                  onSettled: () => {
+                    toast.success("Η κράτηση δημιουργήθηκε από το αίτημα!");
+                    navigate("/bookings");
+                  },
+                },
+              );
+              return;
+            }
             toast.success("Η κράτηση δημιουργήθηκε!");
             navigate("/bookings");
           },
@@ -458,17 +547,25 @@ export default function BookingFormPage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => navigate("/bookings")}
+              onClick={() => navigate(sourceRequest ? "/requests" : "/bookings")}
               className="h-9 w-9 shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
               <h1 className="font-display text-xl md:text-2xl tracking-tight text-foreground">
-                {editBooking ? (isDuplicate ? "Αντιγραφή κράτησης" : "Επεξεργασία κράτησης") : "Νέα κράτηση"}
+                {editBooking
+                  ? (isDuplicate ? "Αντιγραφή κράτησης" : "Επεξεργασία κράτησης")
+                  : sourceRequest
+                    ? "Αποδοχή αιτήματος"
+                    : "Νέα κράτηση"}
               </h1>
               <p className="text-xs md:text-sm text-muted-foreground">
-                {editBooking && !isDuplicate ? `Κράτηση του/της ${editBooking.customer_name}` : "Πελάτης · Όχημα · Οικονομικά · Επικοινωνία"}
+                {editBooking && !isDuplicate
+                  ? `Κράτηση του/της ${editBooking.customer_name}`
+                  : sourceRequest
+                    ? `Αίτημα · ${sourceRequest.customer_name} · επιλέξτε όχημα στόλου`
+                    : "Πελάτης · Όχημα · Οικονομικά · Επικοινωνία"}
               </p>
             </div>
           </div>
