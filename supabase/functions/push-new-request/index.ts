@@ -1,13 +1,16 @@
 // push-new-request: sends an APNs push to every registered Artemis CRM iPhone when a
-// website booking request is inserted. Called by a Database Webhook on
-// public.booking_requests (INSERT). Setup: ios/README.md › "Remote push".
+// website booking request is inserted. Called by the booking_requests_push trigger
+// (migration 20261104010000) with { request_id } only. Setup: ios/README.md › "Remote push".
 //
-// Secrets (supabase secrets set ...):
+// The caller is not trusted: the function re-reads the request with the service role, only
+// pushes requests created in the last 10 minutes, and claims push_sent_at so each request is
+// pushed at most once. Deploy with JWT verification off (the trigger sends no auth header).
+//
+// Secrets:
 //   APNS_KEY_ID        Key ID of the APNs Auth Key (.p8)
 //   APNS_TEAM_ID       Apple Developer Team ID
 //   APNS_PRIVATE_KEY   Full contents of AuthKey_XXXXXXXXXX.p8 (BEGIN/END lines included)
 //   APNS_BUNDLE_ID     Optional, default gr.artemisrental.crm
-//   PUSH_WEBHOOK_SECRET  Shared secret the webhook sends in the x-webhook-secret header
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
@@ -21,12 +24,7 @@ type BookingRequest = {
   status: string;
 };
 
-type WebhookPayload = {
-  type: "INSERT" | "UPDATE" | "DELETE";
-  table: string;
-  schema: string;
-  record: BookingRequest | null;
-};
+const FRESH_MINUTES = 10;
 
 const BUNDLE_ID = Deno.env.get("APNS_BUNDLE_ID") ?? "gr.artemisrental.crm";
 
@@ -72,25 +70,35 @@ function shortRange(a: string, b: string): string {
 }
 
 Deno.serve(async (req) => {
-  const secret = Deno.env.get("PUSH_WEBHOOK_SECRET");
-  if (secret && req.headers.get("x-webhook-secret") !== secret) {
-    return new Response("unauthorized", { status: 401 });
-  }
+  if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
 
-  let payload: WebhookPayload;
+  let requestId: unknown;
   try {
-    payload = await req.json();
+    ({ request_id: requestId } = await req.json());
   } catch {
     return new Response("bad json", { status: 400 });
   }
-  const r = payload.record;
-  if (payload.type !== "INSERT" || payload.table !== "booking_requests" || !r) {
-    return Response.json({ skipped: true });
+  if (typeof requestId !== "string" || !/^[0-9a-f-]{36}$/i.test(requestId)) {
+    return new Response("bad request_id", { status: 400 });
   }
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
   });
+
+  // Claim the request: only fresh, not yet pushed. A second call for the same id gets no row.
+  const freshSince = new Date(Date.now() - FRESH_MINUTES * 60_000).toISOString();
+  const { data: claimed, error: claimError } = await supabase
+    .from("booking_requests")
+    .update({ push_sent_at: new Date().toISOString() })
+    .eq("id", requestId)
+    .is("push_sent_at", null)
+    .gte("created_at", freshSince)
+    .select("id, customer_name, requested_vehicle, check_in, check_out, status")
+    .maybeSingle();
+  if (claimError) return Response.json({ error: claimError.message }, { status: 500 });
+  if (!claimed) return Response.json({ skipped: true });
+  const r = claimed as BookingRequest;
 
   // Vehicle name for the message: match the website slug, else show the raw text.
   let vehicleName = r.requested_vehicle ?? "Όχημα";
