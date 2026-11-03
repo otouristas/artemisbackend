@@ -16,6 +16,7 @@ import {
   MessageCircle,
   Clock,
   Sun,
+  Car,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -113,42 +114,40 @@ export default function TodayPage() {
         title="Σήμερα"
         subtitle={format(new Date(), "EEEE d MMMM yyyy", { locale: el })}
         actions={
-          <Button className="bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => navigate("/booking/new")}>
+          <Button className="rounded-full px-5" onClick={() => navigate("/booking/new")}>
             Νέα κράτηση
           </Button>
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {[
-          { label: "Αφίξεις", value: arrivals.length, icon: LogIn, tone: "text-success bg-success/10 border-success/20" },
-          { label: "Αναχωρήσεις", value: departures.length, icon: LogOut, tone: "text-accent bg-accent/10 border-accent/20" },
-          { label: "Εκκρεμείς", value: pending.length, icon: Clock, tone: "text-warning bg-warning/10 border-warning/20" },
-          { label: "Υπόλοιπα", value: overdueBalances.length, icon: AlertCircle, tone: "text-destructive bg-destructive/10 border-destructive/20" },
+          { label: "Αφίξεις", value: arrivals.length, icon: LogIn, tone: "text-success" },
+          { label: "Αναχωρήσεις", value: departures.length, icon: LogOut, tone: "text-accent" },
+          { label: "Εκκρεμείς", value: pending.length, icon: Clock, tone: "text-warning" },
+          { label: "Υπόλοιπα", value: overdueBalances.length, icon: AlertCircle, tone: "text-destructive" },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-2xl border border-border/30 bg-card/60 backdrop-blur-md px-4 py-3.5 shadow-sm">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
-              <span className={cn("p-1 rounded-lg border", stat.tone)}>
-                <stat.icon className="h-3.5 w-3.5" />
-              </span>
+          <div key={stat.label} className="rounded-xl border border-border bg-card px-4 py-4">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span className="font-medium">{stat.label}</span>
+              <stat.icon className={cn("h-4 w-4", stat.tone)} />
             </div>
-            <p className="font-display text-3xl font-bold tracking-tight">{stat.value}</p>
+            <p className="mt-2 text-[32px] leading-none font-bold tracking-tight">{stat.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-2xl border border-border/30 bg-card/60 backdrop-blur-md p-4 mb-6 shadow-sm">
-        <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Πληρότητα 7 ημερών</p>
+      <div className="rounded-xl border border-border bg-card p-5 mb-10">
+        <p className="text-base font-semibold mb-4">Πληρότητα 7 ημερών</p>
         <div className="grid grid-cols-7 gap-3">
           {occupancyDays.map((d) => (
             <div key={d.day.toISOString()} className="text-center flex flex-col justify-between">
               <p className="text-[10px] text-muted-foreground mb-1.5 capitalize font-medium">
                 {format(d.day, "EEE", { locale: el })}
               </p>
-              <div className="h-20 rounded-lg bg-muted/40 flex items-end overflow-hidden">
+              <div className="h-20 rounded-md bg-muted flex items-end overflow-hidden">
                 <div
-                  className="w-full bg-accent/80 hover:bg-accent transition-all rounded-t-sm"
+                  className="w-full bg-primary/85 hover:bg-primary transition-all rounded-t-sm"
                   style={{ height: `${Math.max(d.pct, 4)}%` }}
                   title={`${d.booked}/${d.total}`}
                 />
@@ -160,25 +159,22 @@ export default function TodayPage() {
       </div>
 
       {quiet ? (
-        <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/95 via-primary to-[#123a52] text-primary-foreground px-6 py-12 text-center">
-          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_20%,#c9833a,transparent_45%),radial-gradient(circle_at_80%_70%,#f7f4ef,transparent_40%)]" />
-          <Sun className="relative h-8 w-8 mx-auto mb-3 text-accent" />
-          <h2 className="relative font-display text-2xl mb-2">Ήσυχη μέρα στο νησί</h2>
-          <p className="relative text-sm text-primary-foreground/75 max-w-md mx-auto mb-5">
+        <div className="rounded-xl border border-border bg-card px-6 py-12 text-center">
+          <Sun className="h-8 w-8 mx-auto mb-3 text-accent" />
+          <h2 className="text-2xl font-bold tracking-tight mb-2">Ήσυχη μέρα στο νησί</h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
             Δεν υπάρχουν αφίξεις, αναχωρήσεις ή εκκρεμότητες για σήμερα. Μπορείτε να προγραμματίσετε νέα κράτηση.
           </p>
-          <Button
-            variant="secondary"
-            className="relative"
-            onClick={() => navigate("/booking/new")}
-          >
+          <Button className="rounded-full px-5" onClick={() => navigate("/booking/new")}>
             Νέα κράτηση
           </Button>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-10">
           <ActionSection
             title="Αφίξεις σήμερα"
+            pill="Παραλαβή σήμερα"
+            pillTone="bg-success/10 text-success"
             icon={LogIn}
             items={arrivals}
             vehicleMap={vehicleMap}
@@ -186,6 +182,8 @@ export default function TodayPage() {
           />
           <ActionSection
             title="Αναχωρήσεις σήμερα"
+            pill="Επιστροφή σήμερα"
+            pillTone="bg-accent/10 text-accent"
             icon={LogOut}
             items={departures}
             vehicleMap={vehicleMap}
@@ -194,6 +192,8 @@ export default function TodayPage() {
           />
           <ActionSection
             title="Εκκρεμείς επιβεβαιώσεις"
+            pill="Θέλει επιβεβαίωση"
+            pillTone="bg-warning/10 text-warning"
             icon={Clock}
             items={pending}
             vehicleMap={vehicleMap}
@@ -201,6 +201,8 @@ export default function TodayPage() {
           />
           <ActionSection
             title="Ανοιχτά υπόλοιπα"
+            pill="Υπόλοιπο ανοιχτό"
+            pillTone="bg-destructive/10 text-destructive"
             icon={AlertCircle}
             items={overdueBalances}
             vehicleMap={vehicleMap}
@@ -215,6 +217,8 @@ export default function TodayPage() {
 
 function ActionSection({
   title,
+  pill,
+  pillTone,
   icon: Icon,
   items,
   vehicleMap,
@@ -222,9 +226,11 @@ function ActionSection({
   showBalance,
 }: {
   title: string;
+  pill: string;
+  pillTone: string;
   icon: typeof LogIn;
   items: Booking[];
-  vehicleMap: Record<string, { name: string }>;
+  vehicleMap: Record<string, { name: string; image_url?: string | null }>;
   onOpen: (b: Booking) => void;
   showBalance?: boolean;
 }) {
@@ -232,29 +238,31 @@ function ActionSection({
 
   return (
     <section>
-      <h2 className="text-sm font-semibold flex items-center gap-2 mb-2">
-        <Icon className="h-4 w-4 text-muted-foreground" />
+      <h2 className="flex items-center gap-2 border-b border-border pb-3 mb-4 text-lg font-semibold">
+        <Icon className="h-4.5 w-4.5 text-muted-foreground" />
         {title}
         <span className="text-muted-foreground font-normal">({items.length})</span>
       </h2>
-      <div className="rounded-2xl border border-border/30 bg-card/50 backdrop-blur-md divide-y divide-border/20 overflow-hidden shadow-sm">
+      <div className="space-y-3">
         {items.map((b) => {
           const balance = (Number(b.total_price) || 0) - (Number(b.deposit_amount) || 0);
+          const vehicle = vehicleMap[b.vehicle_id];
           return (
             <div
               key={b.id}
-              className="flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 active:bg-muted/60 transition-all cursor-pointer touch-target select-none duration-150 active:scale-[0.99]"
+              className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition hover:border-foreground/25 hover:shadow-[0_6px_20px_hsl(204_69%_14%/0.07)] cursor-pointer touch-target select-none active:scale-[0.995]"
               onClick={() => onOpen(b)}
             >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-sm truncate text-foreground">{b.customer_name}</p>
-                  <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0.5", STATUS_CHIP[b.status])}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={cn("rounded-md px-2 py-0.5 text-[11px] font-semibold", pillTone)}>{pill}</span>
+                  <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", STATUS_CHIP[b.status])}>
                     {STATUS_LABELS[b.status]}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {vehicleMap[b.vehicle_id]?.name}
+                <p className="mt-2 text-base font-semibold truncate text-foreground">{vehicle?.name ?? "Όχημα"}</p>
+                <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                  {b.customer_name}
                   {b.delivery_location ? ` · ${b.delivery_location}` : ""}
                   {showBalance && balance > 0 ? ` · υπόλοιπο ${balance}€` : ""}
                 </p>
@@ -262,15 +270,16 @@ function ActionSection({
               {b.customer_phone && (
                 <Button
                   size="icon"
-                  variant="ghost"
-                  className="shrink-0 text-success h-9 w-9 rounded-xl active:bg-success/15 active:scale-[0.92] transition-all"
+                  variant="outline"
+                  className="shrink-0 text-success h-10 w-10 rounded-full"
+                  aria-label="WhatsApp"
                   onClick={(e) => {
                     e.stopPropagation();
                     window.open(
                       buildWhatsAppUrl({
                         customerName: b.customer_name,
                         customerPhone: b.customer_phone!,
-                        vehicleName: vehicleMap[b.vehicle_id]?.name ?? "",
+                        vehicleName: vehicle?.name ?? "",
                         checkIn: b.check_in,
                         checkOut: b.check_out,
                         deliveryLocation: b.delivery_location ?? undefined,
@@ -283,6 +292,13 @@ function ActionSection({
                   <MessageCircle className="h-4.5 w-4.5" />
                 </Button>
               )}
+              <div className="hidden sm:flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+                {vehicle?.image_url ? (
+                  <img src={vehicle.image_url} alt={vehicle.name} className="h-full w-full object-cover" />
+                ) : (
+                  <Car className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
             </div>
           );
         })}

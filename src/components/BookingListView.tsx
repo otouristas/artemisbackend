@@ -140,7 +140,7 @@ export function BookingListView({
             const days = differenceInDays(parseISO(b.check_out), parseISO(b.check_in));
 
             return (
-              <div key={b.id} className="rounded-2xl border border-border/30 bg-card/60 backdrop-blur-md p-4 space-y-3 shadow-sm transition-all active:scale-[0.99] duration-150">
+              <div key={b.id} className="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-sm transition-all active:scale-[0.99] duration-150">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-semibold text-sm text-foreground">{b.customer_name}</div>

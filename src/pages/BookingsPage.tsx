@@ -138,7 +138,7 @@ export default function BookingsPage() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button className="gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => navigate("/booking/new")}>
+            <Button className="gap-1.5" onClick={() => navigate("/booking/new")}>
               <Plus className="h-4 w-4" />
               Νέα
             </Button>

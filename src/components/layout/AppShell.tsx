@@ -110,19 +110,22 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-background md:flex overflow-x-clip">
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:w-60 md:flex-col md:fixed md:inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-40">
-        <div className="px-5 py-5 border-b border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <img src={logoImg} alt="Artemis Rental" className="h-9 w-auto brightness-0 invert" />
-            <div className="min-w-0">
-              <p className="font-display text-lg leading-tight truncate">Artemis</p>
-              <p className="text-[11px] text-sidebar-foreground/65">CRM · Σίφνος</p>
-            </div>
-          </div>
+      {/* Desktop icon rail (host-dashboard style): icon over label, white, thin border */}
+      <aside className="hidden md:flex md:w-[88px] md:flex-col md:items-center md:fixed md:inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-40">
+        <div className="flex h-16 w-full items-center justify-center border-b border-sidebar-border">
+          <img src={logoImg} alt="Artemis Rental" className="h-7 w-auto" />
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <button
+          onClick={() => navigate("/booking/new")}
+          className="mt-4 flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-95"
+          title="Νέα κράτηση"
+          aria-label="Νέα κράτηση"
+        >
+          <Plus className="h-5 w-5" strokeWidth={2.4} />
+        </button>
+
+        <nav className="mt-4 flex w-full flex-1 flex-col items-center gap-1 px-2">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -130,71 +133,66 @@ export function AppShell() {
               end={item.end}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-all duration-200 active:scale-[0.97]",
+                  "relative flex w-full flex-col items-center gap-1 rounded-xl px-1 py-2.5 text-[11px] font-medium transition-colors",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                    ? "bg-sidebar-accent text-sidebar-foreground"
+                    : "text-sidebar-foreground/55 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
                 )
               }
             >
-              <item.icon className="h-4 w-4 shrink-0" />
-              <span className="flex-1">{item.label}</span>
-              {item.to === "/requests" && newRequestCount > 0 && (
-                <span className="ml-auto rounded-full bg-accent text-accent-foreground text-[10px] font-bold min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center">
-                  {newRequestCount > 99 ? "99+" : newRequestCount}
-                </span>
+              {({ isActive }) => (
+                <>
+                  {isActive && <span className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r bg-primary" />}
+                  <item.icon className="h-5 w-5" strokeWidth={isActive ? 2.3 : 1.8} />
+                  <span className="max-w-full truncate leading-tight">{item.label}</span>
+                  {item.to === "/requests" && newRequestCount > 0 && (
+                    <span className="absolute right-3 top-1.5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold min-w-[1.1rem] h-[1.1rem] px-1 flex items-center justify-center">
+                      {newRequestCount > 99 ? "99+" : newRequestCount}
+                    </span>
+                  )}
+                </>
               )}
             </NavLink>
           ))}
         </nav>
 
-        <div className="p-3 border-t border-sidebar-border space-y-2">
+        <div className="flex w-full flex-col items-center gap-1 border-t border-sidebar-border py-3">
+          <ThemeToggle />
           <Button
-            className="w-full gap-2 bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 transition-all active:scale-[0.97]"
-            onClick={() => navigate("/booking/new")}
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "h-9 w-9 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+              notificationPermission === "default" && "text-amber-500",
+            )}
+            onClick={requestNotificationPermission}
+            title="Ειδοποιήσεις"
           >
-            <Plus className="h-4 w-4" />
-            Νέα κράτηση
+            {notificationPermission === "granted" ? (
+              <Bell className="h-4 w-4 text-emerald-600" />
+            ) : notificationPermission === "denied" ? (
+              <BellOff className="h-4 w-4 text-destructive" />
+            ) : (
+              <Bell className="h-4 w-4" />
+            )}
           </Button>
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-0.5">
-              <ThemeToggle />
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "h-9 w-9 rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all active:scale-[0.97]",
-                  notificationPermission === "default" && "text-amber-500"
-                )}
-                onClick={requestNotificationPermission}
-                title="Ειδοποιήσεις"
-              >
-                {notificationPermission === "granted" ? (
-                  <Bell className="h-4 w-4 text-emerald-500 fill-emerald-500/10" />
-                ) : notificationPermission === "denied" ? (
-                  <BellOff className="h-4 w-4 text-destructive" />
-                ) : (
-                  <Bell className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all active:scale-[0.97]"
-              onClick={() => void signOut()}
-            >
-              <LogOut className="h-4 w-4 mr-1.5" />
-              Έξοδος
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+            onClick={() => void signOut()}
+            title="Έξοδος"
+            aria-label="Έξοδος"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </aside>
 
       {/* Main Container */}
-      <div className="flex-1 md:pl-60 min-h-screen flex flex-col pb-24 md:pb-0">
+      <div className="flex-1 min-w-0 md:pl-[88px] min-h-screen flex flex-col pb-24 md:pb-0">
         {/* Mobile top glass header */}
-        <header className="md:hidden sticky top-0 z-30 glass-header safe-top">
+        <header className="md:hidden sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur safe-top">
           <div className="relative flex items-center justify-between gap-3 px-4 py-2.5">
             <div className="flex items-center gap-2.5">
               <img src={logoImg} alt="Artemis" className="h-7 w-auto" />
@@ -242,15 +240,15 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 page-enter">
+        <main className="flex-1 min-w-0 page-enter">
           <Outlet key={location.pathname} />
         </main>
       </div>
 
       {/* Mobile iOS liquid-glass tab bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden safe-bottom">
-        <div className="mx-4 mb-3">
-          <nav className="flex items-center justify-around rounded-[22px] glass-nav px-1 py-1">
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden safe-bottom border-t border-border bg-background/95 backdrop-blur">
+        <div>
+          <nav className="flex items-center justify-around px-1 pt-1.5 pb-1">
             {mobilePrimary.map((item) => {
               const active = item.end
                 ? location.pathname === item.to
@@ -264,7 +262,7 @@ export function AppShell() {
                     active ? "text-primary" : "text-foreground/50",
                   )}
                 >
-                  {active && <span className="absolute inset-0 rounded-2xl bg-primary/10 dark:bg-primary/20" />}
+                  {active && <span className="absolute left-1/2 top-0 h-[3px] w-6 -translate-x-1/2 rounded-b bg-primary" />}
                   <item.icon className="relative h-5 w-5" strokeWidth={active ? 2.5 : 1.8} />
                   <span className="relative">{item.label}</span>
                 </button>
@@ -275,9 +273,8 @@ export function AppShell() {
             <button
               onClick={() => navigate("/booking/new")}
               className={cn(
-                "flex items-center justify-center w-[52px] h-[52px] -mt-5 rounded-full",
-                "bg-accent text-accent-foreground backdrop-blur-xl border border-white/30",
-                "shadow-[0_4px_20px_hsla(30,57%,51%,0.45),inset_0_1px_0_rgba(255,255,255,0.3)]",
+                "flex items-center justify-center w-12 h-12 rounded-full",
+                "bg-primary text-primary-foreground shadow-[0_6px_16px_hsl(204_69%_14%/0.28)]",
                 "active:scale-90 transition-transform duration-200",
               )}
               aria-label="Νέα κράτηση"
@@ -296,7 +293,7 @@ export function AppShell() {
                     active ? "text-primary" : "text-foreground/50",
                   )}
                 >
-                  {active && <span className="absolute inset-0 rounded-2xl bg-primary/10 dark:bg-primary/20" />}
+                  {active && <span className="absolute left-1/2 top-0 h-[3px] w-6 -translate-x-1/2 rounded-b bg-primary" />}
                   <item.icon className="relative h-5 w-5" strokeWidth={active ? 2.5 : 1.8} />
                   <span className="relative">{item.label}</span>
                 </button>
@@ -312,7 +309,7 @@ export function AppShell() {
               )}
             >
               {(moreActive || moreOpen) && (
-                <span className="absolute inset-0 rounded-2xl bg-primary/10 dark:bg-primary/20" />
+                <span className="absolute left-1/2 top-0 h-[3px] w-6 -translate-x-1/2 rounded-b bg-primary" />
               )}
               <span className="relative">
                 <MoreHorizontal className="h-5 w-5" strokeWidth={moreActive || moreOpen ? 2.5 : 1.8} />

@@ -626,7 +626,7 @@ export default function BookingFormPage() {
             {/* Left/Main Content Column */}
             <div className="md:col-span-2 space-y-6">
               {/* Customer info card */}
-              <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
+              <div className="bg-card border border-border rounded-xl p-5 md:p-6 shadow-sm space-y-4">
                 <h2 className="font-display text-lg">Πελάτης</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -646,7 +646,7 @@ export default function BookingFormPage() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-border/40 space-y-2">
+                <div className="pt-2 border-t border-border space-y-2">
                   <div className="flex items-center space-x-2">
                     <input
                       type="checkbox"
@@ -688,7 +688,7 @@ export default function BookingFormPage() {
               </div>
 
               {/* Booking Info Card */}
-              <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
+              <div className="bg-card border border-border rounded-xl p-5 md:p-6 shadow-sm space-y-4">
                 <h2 className="font-display text-lg">Όχημα και ημερομηνίες</h2>
                 {sourceRequest && (
                   <div className="rounded-lg border border-accent/30 bg-accent/5 px-3 py-2.5 text-xs text-muted-foreground">
@@ -857,7 +857,7 @@ export default function BookingFormPage() {
               </div>
 
               {/* Extra Fees Card */}
-              <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
+              <div className="bg-card border border-border rounded-xl p-5 md:p-6 shadow-sm space-y-4">
                 <h2 className="font-display text-lg">Πρόσθετες Χρεώσεις (Extra Fees)</h2>
                 {extraFees.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Δεν έχουν προστεθεί επιπλέον χρεώσεις.</p>
@@ -931,7 +931,7 @@ export default function BookingFormPage() {
 
               {/* Checklist - only for existing bookings */}
               {editBooking && !isDuplicate && (
-                <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
+                <div className="bg-card border border-border rounded-xl p-5 md:p-6 shadow-sm space-y-4">
                   <h2 className="font-display text-lg">Checklist παράδοσης / παραλαβής</h2>
                   <VehicleChecklist bookingId={editBooking.id} />
                 </div>
@@ -941,7 +941,7 @@ export default function BookingFormPage() {
             {/* Right Column: Financial & Actions */}
             <div className="space-y-6">
               {/* Pricing card */}
-              <div className="bg-card/70 border border-border/80 rounded-xl p-5 shadow-sm space-y-4">
+              <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-4">
                 <h2 className="font-display text-lg">Οικονομικά</h2>
 
                 <div className="space-y-2">
@@ -1050,7 +1050,7 @@ export default function BookingFormPage() {
 
               {/* Utility actions card */}
               {((editBooking && !isDuplicate) || customerPhone) && (
-                <div className="bg-card/70 border border-border/80 rounded-xl p-5 shadow-sm space-y-3 animate-in fade-in duration-200">
+                <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-3 animate-in fade-in duration-200">
                   <h2 className="font-display text-lg mb-1">Επικοινωνία</h2>
                   <div className="flex flex-col gap-2">
                     {editBooking && !isDuplicate && (
@@ -1072,7 +1072,7 @@ export default function BookingFormPage() {
               )}
 
               {/* Main Submit & Cancel Buttons */}
-              <div className="bg-card/70 border border-border/80 rounded-xl p-5 shadow-sm space-y-3">
+              <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-3">
                 <Button type="submit" className="w-full text-base font-semibold py-5">
                   {editBooking && !isDuplicate ? "Ενημέρωση Κράτησης" : "Αποθήκευση Κράτησης"}
                 </Button>

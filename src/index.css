@@ -14,8 +14,8 @@
 
 @layer base {
   :root {
-    /* Island desk CRM: aegean / salt / sun / limestone */
-    --background: 38 33% 95%;
+    /* Host-dashboard look: white canvas, neutral greys, navy ink, sun accent */
+    --background: 0 0% 100%;
     --foreground: 204 69% 14%;
 
     --card: 0 0% 100%;
@@ -25,13 +25,13 @@
     --popover-foreground: 204 69% 14%;
 
     --primary: 204 69% 14%;
-    --primary-foreground: 38 33% 96%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 39 29% 90%;
-    --secondary-foreground: 204 64% 20%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 204 69% 14%;
 
-    --muted: 39 24% 91%;
-    --muted-foreground: 204 18% 38%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 14% 42%;
 
     --accent: 30 57% 51%;
     --accent-foreground: 0 0% 100%;
@@ -39,28 +39,28 @@
     --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 95 22% 28%;
+    --success: 152 55% 32%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 30 57% 51%;
+    --warning: 32 85% 44%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 39 18% 82%;
-    --input: 39 18% 82%;
-    --ring: 204 64% 20%;
+    --border: 220 13% 90%;
+    --input: 220 13% 88%;
+    --ring: 204 69% 14%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 204 69% 14%;
-    --sidebar-foreground: 38 30% 94%;
-    --sidebar-primary: 30 57% 51%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 204 69% 14%;
+    --sidebar-primary: 204 69% 14%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 204 55% 18%;
-    --sidebar-accent-foreground: 38 30% 94%;
-    --sidebar-border: 204 40% 22%;
-    --sidebar-ring: 30 57% 51%;
+    --sidebar-accent: 220 14% 95%;
+    --sidebar-accent-foreground: 204 69% 14%;
+    --sidebar-border: 220 13% 90%;
+    --sidebar-ring: 204 69% 14%;
 
-    --font-display: 'Fraunces', Georgia, serif;
+    --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 

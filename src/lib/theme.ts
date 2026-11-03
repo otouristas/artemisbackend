@@ -1,7 +1,7 @@
 export type ThemePref = "light" | "dark" | "system";
 
 const STORAGE_KEY = "theme";
-const THEME_COLORS = { light: "#F5F1EA", dark: "#091A24" };
+const THEME_COLORS = { light: "#FFFFFF", dark: "#091A24" };
 
 const media = window.matchMedia("(prefers-color-scheme: dark)");
 let listening = false;

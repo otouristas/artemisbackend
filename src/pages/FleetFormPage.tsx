@@ -150,7 +150,7 @@ export default function FleetFormPage() {
           )}
 
           {effectiveMode === "existing" ? (
-            <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
+            <div className="bg-card border border-border rounded-xl p-5 md:p-6 shadow-sm space-y-4">
               <h2 className="font-display text-lg">Προσθήκη μονάδων σε υπάρχον όχημα</h2>
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Όχημα από τον στόλο *</Label>
@@ -228,7 +228,7 @@ export default function FleetFormPage() {
             </div>
           ) : (
             <>
-              <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
+              <div className="bg-card border border-border rounded-xl p-5 md:p-6 shadow-sm space-y-4">
                 <h2 className="font-display text-lg">Στοιχεία οχήματος</h2>
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Όνομα *</Label>
@@ -278,7 +278,7 @@ export default function FleetFormPage() {
                 </div>
               </div>
 
-              <div className="bg-card/70 border border-border/80 rounded-xl p-5 md:p-6 shadow-sm space-y-4">
+              <div className="bg-card border border-border rounded-xl p-5 md:p-6 shadow-sm space-y-4">
                 <h2 className="font-display text-lg">Στόλος & Πινακίδες</h2>
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Ποσότητα (πόσα ίδια οχήματα έχετε)</Label>
@@ -318,7 +318,7 @@ export default function FleetFormPage() {
             </>
           )}
 
-          <div className="bg-card/70 border border-border/80 rounded-xl p-5 shadow-sm space-y-3">
+          <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-3">
             <Button
               type="submit"
               className="w-full text-base font-semibold py-5"

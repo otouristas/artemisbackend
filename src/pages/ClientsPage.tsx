@@ -86,7 +86,7 @@ export default function ClientsPage() {
         title="Πελάτες"
         subtitle={`${clients.length} στο CRM`}
         actions={
-          <Button className="gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => setOpen(true)}>
+          <Button className="gap-1.5" onClick={() => setOpen(true)}>
             <Plus className="h-4 w-4" />
             Νέος πελάτης
           </Button>

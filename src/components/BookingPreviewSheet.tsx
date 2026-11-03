@@ -44,7 +44,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 function Row({ label, value }: { label: string; value?: string | number | null }) {
   if (!value && value !== 0) return null;
   return (
-    <div className="flex items-baseline justify-between gap-3 py-1.5 border-b border-border/40 last:border-0">
+    <div className="flex items-baseline justify-between gap-3 py-1.5 border-b border-border last:border-0">
       <span className="text-xs text-muted-foreground min-w-[110px]">{label}</span>
       <span className="text-sm font-medium text-right break-all">{value}</span>
     </div>
@@ -142,7 +142,7 @@ export function BookingPreviewSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-[420px] overflow-y-auto p-0">
-        <SheetHeader className="px-5 pt-5 pb-4 border-b border-border/60 sticky top-0 bg-background/95 backdrop-blur z-10">
+        <SheetHeader className="px-5 pt-5 pb-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur z-10">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1 min-w-0">
               <SheetTitle className="text-lg font-display truncate">{booking.customer_name}</SheetTitle>
@@ -221,7 +221,7 @@ export function BookingPreviewSheet({
           )}
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2 border-t border-border/60">
+          <div className="flex gap-2 pt-2 border-t border-border">
             <Button className="flex-1" onClick={onEdit}>
               Επεξεργασία
             </Button>

@@ -53,7 +53,7 @@ export function FleetAvailability({ vehicles, bookings }: FleetAvailabilityProps
               "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium shrink-0 shadow-sm border",
               allBooked
                 ? "bg-destructive/10 border-destructive/20 text-destructive dark:bg-destructive/15"
-                : "bg-[#f7f4ef]/80 dark:bg-card/40 border-border/40 text-foreground"
+                : "bg-[#f7f4ef]/80 dark:bg-card border-border text-foreground"
             )}
           >
             <Icon className="h-3.5 w-3.5 opacity-70" />

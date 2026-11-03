@@ -367,7 +367,7 @@ export default function RequestsPage() {
         title="Αιτήματα"
         subtitle={`${counts.new} νέα · ${requests.length} συνολικά`}
         actions={
-          <Button className="gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90" onClick={openCreate}>
+          <Button className="gap-1.5" onClick={openCreate}>
             <Plus className="h-4 w-4" />
             Νέο αίτημα
           </Button>
@@ -493,7 +493,7 @@ export default function RequestsPage() {
                   {canAccept && (
                     <Button
                       size="sm"
-                      className="gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90"
+                      className="gap-1.5"
                       onClick={() => openAccept(r)}
                     >
                       <Check className="h-3.5 w-3.5" />
@@ -881,7 +881,7 @@ export default function RequestsPage() {
             <Button
               onClick={() => void handleAcceptContinue()}
               disabled={!acceptVehicleId || acceptSaving}
-              className="gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90 coarse:h-12 coarse:rounded-xl"
+              className="gap-1.5 coarse:h-12 coarse:rounded-xl"
             >
               <Check className="h-4 w-4" />
               Συνέχεια στη κράτηση
