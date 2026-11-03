@@ -177,3 +177,20 @@ redacted skeleton loading.
 * Only `info@artemisrental.gr` can sign in. RLS enforces this, and the app also signs out any other account, like `useAuth.tsx`.
 * Not in the app yet (still on the web): vehicle check-in/out checklists, client merge, creating or editing vehicle models and plates, maintenance blocks, extra fees and discounts in the booking form (existing `extra_fees_json` is kept untouched), and deleting bookings.
 * Fleet photos come from `vehicles.image_url`. Demo mode uses the photos on rentacarsifnos.com.
+
+## TestFlight
+
+The app is in App Store Connect as **Artemis CRM** (Apple ID 6830375827, team S768Y6EZW8). The internal TestFlight
+group **Artemis** gets every build automatically (tester: kasiotisg@gmail.com).
+
+Release builds are signed manually for distribution (`project.yml`, Release config): identity
+"Apple Distribution", profile "Artemis CRM App Store" (App Store, push enabled). No registered devices are needed.
+
+To upload a new build:
+
+```bash
+ASC_KEY_ID=Z2V9ZWZNCA ASC_ISSUER_ID=<issuer id> ios/scripts/testflight.sh
+```
+
+The build number defaults to the current date and time, so every upload is unique. The API key file must be at
+`~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8`. Never commit it.

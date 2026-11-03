@@ -59,7 +59,7 @@
 		<string>gr.artemisrental.crm.refresh</string>
 	</array>
 	<key>ArtemisRemotePushEnabled</key>
-	<false/>
+	<true/>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

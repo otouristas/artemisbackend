@@ -22,6 +22,7 @@
 		696410D9CD0282966094B8A8 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C827C8F72AA2543F6AA1D6BD /* Theme.swift */; };
 		6A83A22D8D5DB90D43F94A9D /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98AE745A0249B280BF31457 /* TodayView.swift */; };
 		7F963163D7F7E034659612F0 /* ArtemisCRMApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DA023D4EFCF1EB575B66284 /* ArtemisCRMApp.swift */; };
+		84FC729FDBB8D4B228976A90 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E32762EBCEC062033B446597 /* PrivacyInfo.xcprivacy */; };
 		8B97A3542BD6CECE23D49C73 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 798311D4EF6186A78B0C607A /* LoginView.swift */; };
 		96D3761553207B7BCD2CE137 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F478B13BECD87C7C8E901662 /* AppStore.swift */; };
 		A54D3DC2D7BEB5137ACFCAFD /* TripCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8A77D2BEEEB393A5EE7D32 /* TripCard.swift */; };
@@ -61,6 +62,7 @@
 		CE95727CB97E2D53465FE212 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		D85FEB02653FABAC7C516BBD /* RequestDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestDetailView.swift; sourceTree = "<group>"; };
 		E0A8949EF81460FA2B086E08 /* ArtemisCRM.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ArtemisCRM.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E32762EBCEC062033B446597 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		EB63F6B8CC1DF938982C8075 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		F478B13BECD87C7C8E901662 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		F53F12B12EB39682876F6DD7 /* RequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestsView.swift; sourceTree = "<group>"; };
@@ -198,6 +200,7 @@
 				0DB5DD3DD8501072AE9AEB5D /* ArtemisCRM.entitlements */,
 				18948849B72BACBE4F5AB3E1 /* Assets.xcassets */,
 				08B3905DD26283C7AD27C268 /* Info.plist */,
+				E32762EBCEC062033B446597 /* PrivacyInfo.xcprivacy */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -273,8 +276,7 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					5BB571BE5BA92BBB6EF78BDA = {
-						DevelopmentTeam = "";
-						ProvisioningStyle = Automatic;
+						DevelopmentTeam = S768Y6EZW8;
 					};
 				};
 			};
@@ -306,6 +308,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C1EF2EE347FD1C14520F3E75 /* Assets.xcassets in Resources */,
+				84FC729FDBB8D4B228976A90 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -351,6 +354,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ArtemisCRM/Resources/ArtemisCRM.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = ArtemisCRM/Resources/Info.plist;
@@ -371,8 +375,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = ArtemisCRM/Resources/ArtemisCRM.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
 				INFOPLIST_FILE = ArtemisCRM/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -380,6 +385,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = gr.artemisrental.crm;
 				PRODUCT_NAME = ArtemisCRM;
+				PROVISIONING_PROFILE_SPECIFIER = "Artemis CRM App Store";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited)";
 				TARGETED_DEVICE_FAMILY = 1;
@@ -422,7 +428,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = S768Y6EZW8;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -483,7 +489,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = S768Y6EZW8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
