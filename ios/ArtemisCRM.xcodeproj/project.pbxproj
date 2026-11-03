@@ -1,0 +1,561 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00717B4E36F96D71B29E7373 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92CFD9AB3145842B76F7A007 /* NotificationManager.swift */; };
+		00F45AF2B2C65940F3A257AA /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE95727CB97E2D53465FE212 /* MainTabView.swift */; };
+		1C602D33216D335A973D3D2C /* Backend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 301D4863973111C212DAE718 /* Backend.swift */; };
+		1E20AA9B24843DDC8D86AA53 /* BookingFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBFB0F1C53FEEBD6D2605480 /* BookingFormView.swift */; };
+		329028A59684813974D89E18 /* FleetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE3C202FAA1A148C55361BA0 /* FleetView.swift */; };
+		34EC7CD3DB4B8C3518B15702 /* SupabaseBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FD9287773473F917968071 /* SupabaseBackend.swift */; };
+		3662B76446304D9D618363E5 /* BookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1594D12D51FCEBB3E40BA0E2 /* BookingsView.swift */; };
+		3E6AAC148E0B24717F54CFF7 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB63F6B8CC1DF938982C8075 /* Models.swift */; };
+		4EC37E22C159C69737C1340D /* DemoBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122BB1B05159679C4508E1C1 /* DemoBackend.swift */; };
+		5C542D8BF2EC5CE690F6BB2A /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84FD15F726D5816DA5C52BA0 /* MoreView.swift */; };
+		5D35FDD9A1C7DB8F7028E6B8 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26AB187567DD0B9FDE67D150 /* DemoData.swift */; };
+		6938AA3C49800958747C291A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E37B617ED4B7DA914CC52B8 /* SettingsView.swift */; };
+		696410D9CD0282966094B8A8 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C827C8F72AA2543F6AA1D6BD /* Theme.swift */; };
+		6A83A22D8D5DB90D43F94A9D /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98AE745A0249B280BF31457 /* TodayView.swift */; };
+		7F963163D7F7E034659612F0 /* ArtemisCRMApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DA023D4EFCF1EB575B66284 /* ArtemisCRMApp.swift */; };
+		8B97A3542BD6CECE23D49C73 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 798311D4EF6186A78B0C607A /* LoginView.swift */; };
+		96D3761553207B7BCD2CE137 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F478B13BECD87C7C8E901662 /* AppStore.swift */; };
+		A54D3DC2D7BEB5137ACFCAFD /* TripCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8A77D2BEEEB393A5EE7D32 /* TripCard.swift */; };
+		A7CFB7A65907BAEDB0DE83C5 /* BusinessLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC4534386AD0E94E043ADA9 /* BusinessLogic.swift */; };
+		B12F5543BBF4711BF9879553 /* VehicleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69BC082BEDD40878539E03CB /* VehicleDetailView.swift */; };
+		C1EF2EE347FD1C14520F3E75 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 18948849B72BACBE4F5AB3E1 /* Assets.xcassets */; };
+		CBA833409F1696ED43A4487B /* MoneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0C41149742ACB5F841BF968 /* MoneyView.swift */; };
+		CEAAC0CE18451D7827D6D597 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 9F71701C27D377F61E2BC29B /* Supabase */; };
+		D2C9A1C403E2CB90C0D62263 /* RequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F53F12B12EB39682876F6DD7 /* RequestsView.swift */; };
+		E89CDC3E23EA97405262A2C2 /* RequestDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D85FEB02653FABAC7C516BBD /* RequestDetailView.swift */; };
+		FFA976C05FB245D66DFDBCC9 /* BookingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FD24BF74025BD4ECEB0AC06 /* BookingDetailView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		08B3905DD26283C7AD27C268 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		0DB5DD3DD8501072AE9AEB5D /* ArtemisCRM.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArtemisCRM.entitlements; sourceTree = "<group>"; };
+		0FD24BF74025BD4ECEB0AC06 /* BookingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingDetailView.swift; sourceTree = "<group>"; };
+		122BB1B05159679C4508E1C1 /* DemoBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoBackend.swift; sourceTree = "<group>"; };
+		1594D12D51FCEBB3E40BA0E2 /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
+		18948849B72BACBE4F5AB3E1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		26AB187567DD0B9FDE67D150 /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
+		301D4863973111C212DAE718 /* Backend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Backend.swift; sourceTree = "<group>"; };
+		3A8A77D2BEEEB393A5EE7D32 /* TripCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripCard.swift; sourceTree = "<group>"; };
+		69BC082BEDD40878539E03CB /* VehicleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleDetailView.swift; sourceTree = "<group>"; };
+		798311D4EF6186A78B0C607A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		84FD15F726D5816DA5C52BA0 /* MoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreView.swift; sourceTree = "<group>"; };
+		8E37B617ED4B7DA914CC52B8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		92CFD9AB3145842B76F7A007 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		9DA023D4EFCF1EB575B66284 /* ArtemisCRMApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtemisCRMApp.swift; sourceTree = "<group>"; };
+		AAC4534386AD0E94E043ADA9 /* BusinessLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusinessLogic.swift; sourceTree = "<group>"; };
+		B4FD9287773473F917968071 /* SupabaseBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBackend.swift; sourceTree = "<group>"; };
+		C0C41149742ACB5F841BF968 /* MoneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyView.swift; sourceTree = "<group>"; };
+		C827C8F72AA2543F6AA1D6BD /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		C98AE745A0249B280BF31457 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		CBFB0F1C53FEEBD6D2605480 /* BookingFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingFormView.swift; sourceTree = "<group>"; };
+		CE3C202FAA1A148C55361BA0 /* FleetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetView.swift; sourceTree = "<group>"; };
+		CE95727CB97E2D53465FE212 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		D85FEB02653FABAC7C516BBD /* RequestDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestDetailView.swift; sourceTree = "<group>"; };
+		E0A8949EF81460FA2B086E08 /* ArtemisCRM.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ArtemisCRM.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EB63F6B8CC1DF938982C8075 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		F478B13BECD87C7C8E901662 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
+		F53F12B12EB39682876F6DD7 /* RequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestsView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1D6AEA244B6AA2A021A8A0F6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CEAAC0CE18451D7827D6D597 /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		00C9D2DC5D0879222DF26495 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				C827C8F72AA2543F6AA1D6BD /* Theme.swift */,
+				3A8A77D2BEEEB393A5EE7D32 /* TripCard.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		0348557E50C73879147F1091 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				904C496B48BC0E729BF6ECA3 /* Bookings */,
+				5566E7E87362DE031E505AA7 /* Fleet */,
+				B6BB946D65F42F1CDE38A116 /* Login */,
+				CA21A7724E03076DBF07E713 /* More */,
+				0FF8C1CDA1EA398AF1041699 /* Requests */,
+				34088005D4BE0827866EB342 /* Today */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		0798651CF520C2114F3ECD98 = {
+			isa = PBXGroup;
+			children = (
+				83C5CBAE87EA60E5492691D3 /* ArtemisCRM */,
+				147BD71074D2574155F71B55 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0FF8C1CDA1EA398AF1041699 /* Requests */ = {
+			isa = PBXGroup;
+			children = (
+				D85FEB02653FABAC7C516BBD /* RequestDetailView.swift */,
+				F53F12B12EB39682876F6DD7 /* RequestsView.swift */,
+			);
+			path = Requests;
+			sourceTree = "<group>";
+		};
+		147BD71074D2574155F71B55 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E0A8949EF81460FA2B086E08 /* ArtemisCRM.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		34088005D4BE0827866EB342 /* Today */ = {
+			isa = PBXGroup;
+			children = (
+				C98AE745A0249B280BF31457 /* TodayView.swift */,
+			);
+			path = Today;
+			sourceTree = "<group>";
+		};
+		3C2FAFCD626A625FD9431D80 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				EB63F6B8CC1DF938982C8075 /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		5566E7E87362DE031E505AA7 /* Fleet */ = {
+			isa = PBXGroup;
+			children = (
+				CE3C202FAA1A148C55361BA0 /* FleetView.swift */,
+				69BC082BEDD40878539E03CB /* VehicleDetailView.swift */,
+			);
+			path = Fleet;
+			sourceTree = "<group>";
+		};
+		82032371662B9599529E44B0 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				9DA023D4EFCF1EB575B66284 /* ArtemisCRMApp.swift */,
+				CE95727CB97E2D53465FE212 /* MainTabView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		83C5CBAE87EA60E5492691D3 /* ArtemisCRM */ = {
+			isa = PBXGroup;
+			children = (
+				82032371662B9599529E44B0 /* App */,
+				F7791B0F7B122000DEB00775 /* Demo */,
+				00C9D2DC5D0879222DF26495 /* Design */,
+				0348557E50C73879147F1091 /* Features */,
+				E2C7DA58EB5AAE5D0796AA89 /* Logic */,
+				3C2FAFCD626A625FD9431D80 /* Models */,
+				BA14004AEA152AE2F38CED24 /* Resources */,
+				E300E72405EB18FB485E146B /* Services */,
+			);
+			path = ArtemisCRM;
+			sourceTree = "<group>";
+		};
+		904C496B48BC0E729BF6ECA3 /* Bookings */ = {
+			isa = PBXGroup;
+			children = (
+				0FD24BF74025BD4ECEB0AC06 /* BookingDetailView.swift */,
+				CBFB0F1C53FEEBD6D2605480 /* BookingFormView.swift */,
+				1594D12D51FCEBB3E40BA0E2 /* BookingsView.swift */,
+			);
+			path = Bookings;
+			sourceTree = "<group>";
+		};
+		B6BB946D65F42F1CDE38A116 /* Login */ = {
+			isa = PBXGroup;
+			children = (
+				798311D4EF6186A78B0C607A /* LoginView.swift */,
+			);
+			path = Login;
+			sourceTree = "<group>";
+		};
+		BA14004AEA152AE2F38CED24 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				0DB5DD3DD8501072AE9AEB5D /* ArtemisCRM.entitlements */,
+				18948849B72BACBE4F5AB3E1 /* Assets.xcassets */,
+				08B3905DD26283C7AD27C268 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		CA21A7724E03076DBF07E713 /* More */ = {
+			isa = PBXGroup;
+			children = (
+				C0C41149742ACB5F841BF968 /* MoneyView.swift */,
+				84FD15F726D5816DA5C52BA0 /* MoreView.swift */,
+				8E37B617ED4B7DA914CC52B8 /* SettingsView.swift */,
+			);
+			path = More;
+			sourceTree = "<group>";
+		};
+		E2C7DA58EB5AAE5D0796AA89 /* Logic */ = {
+			isa = PBXGroup;
+			children = (
+				AAC4534386AD0E94E043ADA9 /* BusinessLogic.swift */,
+			);
+			path = Logic;
+			sourceTree = "<group>";
+		};
+		E300E72405EB18FB485E146B /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F478B13BECD87C7C8E901662 /* AppStore.swift */,
+				301D4863973111C212DAE718 /* Backend.swift */,
+				92CFD9AB3145842B76F7A007 /* NotificationManager.swift */,
+				B4FD9287773473F917968071 /* SupabaseBackend.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		F7791B0F7B122000DEB00775 /* Demo */ = {
+			isa = PBXGroup;
+			children = (
+				122BB1B05159679C4508E1C1 /* DemoBackend.swift */,
+				26AB187567DD0B9FDE67D150 /* DemoData.swift */,
+			);
+			path = Demo;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5BB571BE5BA92BBB6EF78BDA /* ArtemisCRM */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B13F2F0261751DFFB098E040 /* Build configuration list for PBXNativeTarget "ArtemisCRM" */;
+			buildPhases = (
+				79456B3255EA9671DD1E5243 /* Sources */,
+				6EDC78EE40FAC726DFA19686 /* Resources */,
+				1D6AEA244B6AA2A021A8A0F6 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ArtemisCRM;
+			packageProductDependencies = (
+				9F71701C27D377F61E2BC29B /* Supabase */,
+			);
+			productName = ArtemisCRM;
+			productReference = E0A8949EF81460FA2B086E08 /* ArtemisCRM.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		79677343C386D2DAB6FCB616 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					5BB571BE5BA92BBB6EF78BDA = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 26B135E6DC40246F3CE86F48 /* Build configuration list for PBXProject "ArtemisCRM" */;
+			developmentRegion = el;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				el,
+			);
+			mainGroup = 0798651CF520C2114F3ECD98;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9A1664F5C838C7AB8A21D931 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 147BD71074D2574155F71B55 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5BB571BE5BA92BBB6EF78BDA /* ArtemisCRM */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6EDC78EE40FAC726DFA19686 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1EF2EE347FD1C14520F3E75 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		79456B3255EA9671DD1E5243 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				96D3761553207B7BCD2CE137 /* AppStore.swift in Sources */,
+				7F963163D7F7E034659612F0 /* ArtemisCRMApp.swift in Sources */,
+				1C602D33216D335A973D3D2C /* Backend.swift in Sources */,
+				FFA976C05FB245D66DFDBCC9 /* BookingDetailView.swift in Sources */,
+				1E20AA9B24843DDC8D86AA53 /* BookingFormView.swift in Sources */,
+				3662B76446304D9D618363E5 /* BookingsView.swift in Sources */,
+				A7CFB7A65907BAEDB0DE83C5 /* BusinessLogic.swift in Sources */,
+				4EC37E22C159C69737C1340D /* DemoBackend.swift in Sources */,
+				5D35FDD9A1C7DB8F7028E6B8 /* DemoData.swift in Sources */,
+				329028A59684813974D89E18 /* FleetView.swift in Sources */,
+				8B97A3542BD6CECE23D49C73 /* LoginView.swift in Sources */,
+				00F45AF2B2C65940F3A257AA /* MainTabView.swift in Sources */,
+				3E6AAC148E0B24717F54CFF7 /* Models.swift in Sources */,
+				CBA833409F1696ED43A4487B /* MoneyView.swift in Sources */,
+				5C542D8BF2EC5CE690F6BB2A /* MoreView.swift in Sources */,
+				00717B4E36F96D71B29E7373 /* NotificationManager.swift in Sources */,
+				E89CDC3E23EA97405262A2C2 /* RequestDetailView.swift in Sources */,
+				D2C9A1C403E2CB90C0D62263 /* RequestsView.swift in Sources */,
+				6938AA3C49800958747C291A /* SettingsView.swift in Sources */,
+				34EC7CD3DB4B8C3518B15702 /* SupabaseBackend.swift in Sources */,
+				696410D9CD0282966094B8A8 /* Theme.swift in Sources */,
+				6A83A22D8D5DB90D43F94A9D /* TodayView.swift in Sources */,
+				A54D3DC2D7BEB5137ACFCAFD /* TripCard.swift in Sources */,
+				B12F5543BBF4711BF9879553 /* VehicleDetailView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		6B61B0D6B9EBEA59D370ED33 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = ArtemisCRM/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = gr.artemisrental.crm;
+				PRODUCT_NAME = ArtemisCRM;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		AA9A157E2627618D8250A665 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = ArtemisCRM/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = gr.artemisrental.crm;
+				PRODUCT_NAME = ArtemisCRM;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited)";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		F98B9D913074425AF6D61962 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		FA6D3683599AE0266CCCEFED /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		26B135E6DC40246F3CE86F48 /* Build configuration list for PBXProject "ArtemisCRM" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FA6D3683599AE0266CCCEFED /* Debug */,
+				F98B9D913074425AF6D61962 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B13F2F0261751DFFB098E040 /* Build configuration list for PBXNativeTarget "ArtemisCRM" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6B61B0D6B9EBEA59D370ED33 /* Debug */,
+				AA9A157E2627618D8250A665 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		9A1664F5C838C7AB8A21D931 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9F71701C27D377F61E2BC29B /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9A1664F5C838C7AB8A21D931 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 79677343C386D2DAB6FCB616 /* Project object */;
+}
