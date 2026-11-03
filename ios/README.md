@@ -206,3 +206,20 @@ redacted skeleton loading.
 * Still only on the web: editing a client's profile fields and tags, duplicating a booking, the yearly price calendar, copying periods from another model and the bulk monthly prices, and editing a model's name, cc or legacy low/high rates.
 * Checklist photos cannot be deleted from the app (the web cannot either).
 * Fleet photos come from `vehicles.image_url`. Demo mode uses the photos on rentacarsifnos.com.
+
+## TestFlight
+
+The app is in App Store Connect as **Artemis CRM** (Apple ID 6830375827, team S768Y6EZW8). The internal TestFlight
+group **Artemis** gets every build automatically (tester: kasiotisg@gmail.com).
+
+Release builds are signed manually for distribution (`project.yml`, Release config): identity
+"Apple Distribution", profile "Artemis CRM App Store" (App Store, push enabled). No registered devices are needed.
+
+To upload a new build:
+
+```bash
+ASC_KEY_ID=Z2V9ZWZNCA ASC_ISSUER_ID=<issuer id> ios/scripts/testflight.sh
+```
+
+The build number defaults to the current date and time, so every upload is unique. The API key file must be at
+`~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8`. Never commit it.
