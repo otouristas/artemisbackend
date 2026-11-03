@@ -39,9 +39,9 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
-        # Remote push: uncomment once the App ID has the Push Notifications capability
-        # (paid Apple Developer account). See README.md › "Remote push".
-        # CODE_SIGN_ENTITLEMENTS: ArtemisCRM/Resources/ArtemisCRM.entitlements
+        # Remote push (aps-environment). Needs the Push Notifications capability on the App ID.
+        # Archive/TestFlight signing switches aps-environment to production. See README.md › "Remote push".
+        CODE_SIGN_ENTITLEMENTS: ArtemisCRM/Resources/ArtemisCRM.entitlements
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited)"
       configs:
         Debug:

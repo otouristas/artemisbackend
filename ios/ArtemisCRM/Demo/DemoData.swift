@@ -1,5 +1,6 @@
 #if DEBUG
 import Foundation
+import UIKit
 
 /// Realistic sample data relative to today: 16 models, ~30 bookings this week and next month,
 /// a season of history for the charts, clients and website requests.
@@ -172,8 +173,24 @@ enum DemoData {
             }
         }
 
-        // A maintenance block
+        // A duplicate profile of client 0 (same phone in another format), with one older booking: client merge.
+        s.clients.append(Client(id: id("0000000c", 17), name: "Maria Papadopoulou", phone: "+30 694 412 3456", email: "maria.pap@gmail.com",
+                                preferredLanguage: "en", createdAt: ISO.string(Day.add(-30, to: Date()))))
+        addBooking(5, 16, Day.add(-75, to: today), 3, .confirmed, 1.0, "Λιμάνι Καμάρες", source: "website", method: "card")
+
+        // Extra fees + returning-customer discount on the first pickup of today (extra_fees_json).
+        if let i = s.bookings.firstIndex(where: { $0.id == id("0000000b", 1) }) {
+            let fees = [ExtraFee(id: "k3f9a2x", label: "Παιδικό κάθισμα", amount: 15),
+                        ExtraFee(id: "p8w1m4z", label: "Παράδοση στο λιμάνι", amount: 10),
+                        ExtraFee(id: ExtraFee.discountID, label: "Έκπτωση παλιού πελάτη (20€)", amount: -20)]
+            s.bookings[i].extraFeesJSON = ExtraFee.serialize(fees)
+            s.bookings[i].totalPrice = (s.bookings[i].totalPrice ?? 0) + 5
+        }
+
+        // Maintenance blocks: one now, one done, one planned (each holds one unit).
         s.blocks.append(VehicleBlock(id: id("0000000k", 1), vehicleID: s.vehicles[0].id, startDate: Day.add(-1, to: today), endDate: Day.add(2, to: today), reason: "Service"))
+        s.blocks.append(VehicleBlock(id: id("0000000k", 2), vehicleID: s.vehicles[0].id, startDate: Day.add(-40, to: today), endDate: Day.add(-38, to: today), reason: "Αλλαγή ελαστικών"))
+        s.blocks.append(VehicleBlock(id: id("0000000k", 3), vehicleID: s.vehicles[0].id, startDate: Day.add(20, to: today), endDate: Day.add(21, to: today), reason: "ΚΤΕΟ"))
 
         // Website requests
         func req(_ n: Int, _ name: String, _ phone: String?, _ email: String?, _ vehicle: String, _ inOff: Int, _ nights: Int,
@@ -204,6 +221,79 @@ enum DemoData {
         s.requests.append(accepted)
         s.bookings.sort { $0.checkIn < $1.checkIn }
         return s
+    }
+
+    /// The booking that `-DemoRoute bookings/checklist` opens: in rental, returns today, check-in recorded.
+    static let checklistBookingID = id("0000000b", 4)
+    /// The pickup of today with extra fees and a returning-customer discount.
+    static let feesBookingID = id("0000000b", 1)
+
+    /// Check-in/out checklists for two bookings (one open, one finished), with generated photos.
+    static func checklists(for s: Snapshot) -> [VehicleChecklist] {
+        var out: [VehicleChecklist] = []
+        func at(_ day: String, _ hour: Int) -> String {
+            let d = Day.calendar.date(bySettingHour: hour, minute: 25, second: 0, of: Day.date(day)) ?? Date()
+            return ISO.string(d)
+        }
+        if let b = s.bookings.first(where: { $0.id == checklistBookingID }) {
+            out.append(VehicleChecklist(id: id("0000000l", 1), bookingID: b.id, type: .checkIn, fuelLevel: 100, mileage: 48210,
+                                        damageNotes: "Γρατζουνιά στον πίσω προφυλακτήρα, δεξιά. Ο πελάτης ενημερώθηκε.",
+                                        photoURLs: [samplePhoto(0), samplePhoto(1), samplePhoto(2)].compactMap { $0 }, createdAt: at(b.checkIn, 10)))
+        }
+        if let b = s.bookings.first(where: { $0.id == id("0000000b", 30) }) {
+            out.append(VehicleChecklist(id: id("0000000l", 2), bookingID: b.id, type: .checkIn, fuelLevel: 100, mileage: 47380,
+                                        damageNotes: nil, photoURLs: [samplePhoto(3)].compactMap { $0 }, createdAt: at(b.checkIn, 9)))
+            out.append(VehicleChecklist(id: id("0000000l", 3), bookingID: b.id, type: .checkOut, fuelLevel: 75, mileage: 47812,
+                                        damageNotes: nil, photoURLs: [], createdAt: at(b.checkOut, 18)))
+        }
+        return out
+    }
+
+    static func storePhoto(_ jpeg: Data, name: String) throws -> String {
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("demo-vehicle-photos", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent(name)
+        try jpeg.write(to: url, options: .atomic)
+        return url.absoluteString
+    }
+
+    /// A drawn "photo" of a car side with a marked spot, so demo checklists have pictures.
+    static func samplePhoto(_ n: Int) -> String? {
+        let img = sampleImage(n)
+        guard let data = img.jpegData(compressionQuality: 0.8) else { return nil }
+        return try? storePhoto(data, name: "sample-\(n).jpg")
+    }
+
+    static func sampleImage(_ n: Int) -> UIImage {
+        let size = CGSize(width: 900, height: 675)
+        let palettes: [(UIColor, UIColor)] = [
+            (UIColor(red: 0.80, green: 0.88, blue: 0.95, alpha: 1), UIColor(red: 0.93, green: 0.89, blue: 0.80, alpha: 1)),
+            (UIColor(red: 0.86, green: 0.84, blue: 0.80, alpha: 1), UIColor(red: 0.70, green: 0.68, blue: 0.64, alpha: 1)),
+            (UIColor(red: 0.78, green: 0.86, blue: 0.92, alpha: 1), UIColor(red: 0.85, green: 0.80, blue: 0.70, alpha: 1)),
+            (UIColor(red: 0.92, green: 0.86, blue: 0.76, alpha: 1), UIColor(red: 0.80, green: 0.74, blue: 0.64, alpha: 1)),
+        ]
+        let (top, bottom) = palettes[n % palettes.count]
+        let symbols = ["car.side.fill", "car.rear.fill", "steeringwheel", "car.side.fill"]
+        return UIGraphicsImageRenderer(size: size).image { ctx in
+            let cg = ctx.cgContext
+            let colors = [top.cgColor, bottom.cgColor] as CFArray
+            if let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) {
+                cg.drawLinearGradient(g, start: .zero, end: CGPoint(x: 0, y: size.height), options: [])
+            }
+            let config = UIImage.SymbolConfiguration(pointSize: 360, weight: .regular)
+            if let sym = UIImage(systemName: symbols[n % symbols.count], withConfiguration: config)?
+                .withTintColor(UIColor(red: 0.04, green: 0.16, blue: 0.24, alpha: 0.88), renderingMode: .alwaysOriginal) {
+                let w = size.width * 0.78, h = w * sym.size.height / sym.size.width
+                sym.draw(in: CGRect(x: (size.width - w) / 2, y: (size.height - h) / 2 + 20, width: w, height: h))
+            }
+            if n % 4 == 0 || n % 4 == 1 {
+                let r = CGRect(x: n % 4 == 0 ? 600 : 250, y: 300, width: 150, height: 150)
+                cg.setStrokeColor(UIColor(red: 0.85, green: 0.2, blue: 0.15, alpha: 1).cgColor)
+                cg.setLineWidth(9)
+                cg.setLineDash(phase: 0, lengths: [22, 12])
+                cg.strokeEllipse(in: r)
+            }
+        }
     }
 
     /// The request that "arrives" with -DemoSimulateRequest.

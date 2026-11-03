@@ -21,6 +21,19 @@ final class NotificationManager: NSObject, ObservableObject {
         static let lastSeen = "lastSeenRequestCreatedAt"
         static let deviceToken = "apnsDeviceToken"
         static let lastBackgroundRun = "lastBackgroundRun"
+        /// The token value and time of the last upsert that succeeded on the server.
+        static let uploadedToken = "apnsTokenUploaded"
+        static let uploadedAt = "apnsTokenUploadedAt"
+    }
+
+    enum TokenStatus: Equatable { case none, saving, saved(Date), failed }
+    @Published private(set) var tokenStatus: TokenStatus = NotificationManager.storedTokenStatus()
+
+    private static func storedTokenStatus() -> TokenStatus {
+        let d = UserDefaults.standard
+        guard let token = d.string(forKey: Keys.deviceToken), token == d.string(forKey: Keys.uploadedToken),
+              let at = d.object(forKey: Keys.uploadedAt) as? Date else { return .none }
+        return .saved(at)
     }
 
     var enabled: Bool {
@@ -145,11 +158,45 @@ final class NotificationManager: NSObject, ObservableObject {
 
     // MARK: Remote push
 
+    /// Called on every launch and every return to the foreground while signed in: iOS hands back the
+    /// (same or new) token in didRegister, which upserts it again, so a failed upload is retried.
+    func registerForRemotePushIfPossible() async {
+        await refreshAuthorization()
+        guard AppConfig.remotePushEnabled, authorization == .authorized else { return }
+        UIApplication.shared.registerForRemoteNotifications()
+    }
+
+    /// Settings › Remote push › Επανεγγραφή.
+    func reregister() async {
+        if let token = deviceToken { await upload(token) }
+        await registerForRemotePushIfPossible()
+    }
+
+    /// Always upsert (even an unchanged token); it counts as uploaded only after the server saved it.
     func didRegister(token: Data) {
         let hex = token.map { String(format: "%02x", $0) }.joined()
         deviceToken = hex
         UserDefaults.standard.set(hex, forKey: Keys.deviceToken)
-        Task { await backend?.saveDeviceToken(hex) }
+        Task { await upload(hex) }
+    }
+
+    private var uploading = false
+
+    private func upload(_ token: String) async {
+        guard let backend, !uploading else { return }
+        uploading = true
+        defer { uploading = false }
+        tokenStatus = .saving
+        do {
+            try await backend.saveDeviceToken(token)
+            let now = Date()
+            UserDefaults.standard.set(token, forKey: Keys.uploadedToken)
+            UserDefaults.standard.set(now, forKey: Keys.uploadedAt)
+            tokenStatus = .saved(now)
+        } catch {
+            UserDefaults.standard.removeObject(forKey: Keys.uploadedToken)
+            tokenStatus = .failed
+        }
     }
 }
 

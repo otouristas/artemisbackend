@@ -13,15 +13,15 @@ struct MoreView: View {
         List {
             Section {
                 HStack(spacing: 14) {
-                    Image("Logo")
+                    Image("BrandSymbol")
                         .resizable().scaledToFit()
                         .foregroundStyle(.white)
-                        .padding(10)
+                        .padding(12)
                         .frame(width: 64, height: 64)
                         .background(Color.navyFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 6) {
-                            Text("Artemis Rental").font(.headline)
+                        HStack(spacing: 8) {
+                            BrandLogo(height: 30)
                             if store.isDemo { DemoBadge() }
                         }
                         Text(email).font(.subheadline).foregroundStyle(.secondary)
@@ -105,6 +105,7 @@ struct ClientsView: View {
                             HStack(spacing: 6) {
                                 Text(c.name).font(.body.weight(.medium))
                                 ForEach(c.tags ?? [], id: \.self) { StatusPill(text: $0, color: .sun) }
+                                if !store.duplicates(of: c).isEmpty { StatusPill(text: "Διπλότυπο", color: .warning, icon: "arrow.triangle.merge") }
                             }
                             Text(c.phone ?? c.email ?? "—").font(.caption).foregroundStyle(.secondary)
                         }
@@ -135,6 +136,9 @@ struct ClientDetailView: View {
     @EnvironmentObject private var store: AppStore
     let clientID: String
     @State private var newBooking = false
+    @State private var mergeID: String?
+    @State private var confirmMerge = false
+    @State private var merging = false
 
     var body: some View {
         if let c = store.client(clientID) {
@@ -162,6 +166,8 @@ struct ClientDetailView: View {
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                 }
+                let duplicates = store.duplicates(of: c)
+                if !duplicates.isEmpty { mergeSection(c, duplicates) }
                 Section("Στοιχεία") {
                     if let p = c.phone { InfoRow(icon: "phone", title: "Τηλέφωνο", value: p) }
                     if let e = c.email { InfoRow(icon: "envelope", title: "Email", value: e) }
@@ -195,6 +201,22 @@ struct ClientDetailView: View {
                 Button { newBooking = true } label: { Image(systemName: "calendar.badge.plus") }
                     .accessibilityLabel("Νέα κράτηση για τον πελάτη")
             }
+            .task {
+                #if DEBUG
+                if AppConfig.demoRoute == "more/client/merge", let d = store.duplicates(of: c).first {
+                    try? await Task.sleep(nanoseconds: 1_600_000_000)
+                    mergeID = d.id
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    confirmMerge = true
+                }
+                #endif
+            }
+            .alert("Συγχώνευση πελατών;", isPresented: $confirmMerge) {
+                Button("Συγχώνευση", role: .destructive) { merge(keep: c) }
+                Button("Ακύρωση", role: .cancel) {}
+            } message: {
+                Text("Οι κρατήσεις του «\(store.client(mergeID)?.name ?? "")» θα μεταφερθούν στον «\(c.name)» και το διπλότυπο προφίλ θα διαγραφεί. Η ενέργεια δεν αναιρείται.")
+            }
             .sheet(isPresented: $newBooking) {
                 BookingFormView(mode: .create(prefill: {
                     var i = BookingInput()
@@ -205,6 +227,74 @@ struct ClientDetailView: View {
             }
         } else {
             ContentUnavailableView("Ο πελάτης δεν βρέθηκε", systemImage: "person.crop.circle.badge.questionmark")
+        }
+    }
+
+    /// MergeDuplicatesCard.tsx: same phone (last 10 digits) on another profile.
+    private func mergeSection(_ c: Client, _ duplicates: [Client]) -> some View {
+        Section {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "arrow.triangle.merge")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.sun)
+                    .frame(width: 32, height: 32)
+                    .background(Color.sun.opacity(0.15), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Πιθανά διπλότυπα").font(.subheadline.weight(.semibold))
+                    Text("Βρέθηκαν πελάτες με το ίδιο τηλέφωνο. Συγχωνεύστε σε αυτό το προφίλ.").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .padding(.vertical, 2)
+            ForEach(duplicates) { d in
+                let count = store.bookings.filter { $0.clientID == d.id }.count
+                Button {
+                    Haptics.select()
+                    mergeID = mergeID == d.id ? nil : d.id
+                } label: {
+                    HStack(spacing: 12) {
+                        Avatar(name: d.name, size: 36, tint: .sun)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(d.name).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
+                            Text([d.phone, d.email, d.createdAt.map { "από \(Day.format($0, "d MMM yyyy"))" }].compactMap { $0?.nilIfBlank }.joined(separator: " · "))
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                            Text(count == 1 ? "1 κράτηση" : "\(count) κρατήσεις").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: mergeID == d.id ? "largecircle.fill.circle" : "circle")
+                            .font(.title3)
+                            .foregroundStyle(mergeID == d.id ? Color.sun : Color.secondary.opacity(0.5))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(mergeID == d.id ? .isSelected : [])
+            }
+            Button { confirmMerge = true } label: {
+                HStack {
+                    if merging { ProgressView().tint(.white) }
+                    Label("Συγχώνευση", systemImage: "arrow.triangle.merge")
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle(tint: .sun))
+            .disabled(mergeID == nil || merging)
+            .opacity(mergeID == nil ? 0.5 : 1)
+            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+        }
+        .listRowBackground(Color.sun.opacity(0.07))
+    }
+
+    private func merge(keep: Client) {
+        guard let id = mergeID, let dup = store.client(id) else { return }
+        merging = true
+        Task {
+            do {
+                try await store.mergeClients(keep: keep, merge: dup)
+                mergeID = nil
+            } catch {
+                Haptics.notify(.error)
+                store.show("Σφάλμα συγχώνευσης", error: true)
+            }
+            merging = false
         }
     }
 

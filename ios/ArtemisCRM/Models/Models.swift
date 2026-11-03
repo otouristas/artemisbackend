@@ -42,10 +42,12 @@ struct Vehicle: Codable, Identifiable, Hashable {
         case dailyRateHigh = "daily_rate_high"
     }
 
-    /// Unit plates: the plates array wins, else the comma string the web CRM writes.
+    /// Unit plates, parsePlates() in fleetData.ts: the comma string `plate` the web CRM writes is the
+    /// source of truth, the `plates` array the fallback.
     var unitPlates: [String] {
-        if let plates, !plates.isEmpty { return plates.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty } }
-        return (plate ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        let fromString = (plate ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        if !fromString.isEmpty { return fromString }
+        return (plates ?? []).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
     var units: Int { max(quantity, 1) }
@@ -99,6 +101,8 @@ struct Booking: Codable, Identifiable, Hashable {
     var balance: Double { max(total - paid, 0) }
     var nights: Int { Day.nights(from: checkIn, to: checkOut) }
     var isActive: Bool { status != .cancelled }
+    /// Lines of extra_fees_json (fees and the returning-customer discount).
+    var extraFees: [ExtraFee] { ExtraFee.parse(extraFeesJSON) }
 }
 
 struct BookingRequest: Codable, Identifiable, Hashable {
@@ -219,9 +223,14 @@ struct BookingInput: Encodable, Equatable {
     var paymentMethod: String = "cash"
     var bookingSource: String = "phone"
     var comments: String?
+    /// Extra fee lines (without the discount), as on BookingFormPage.
+    var extraFees: [ExtraFee] = []
+    var isReturningCustomer = false
+    var discountAmount: Double = 0
 
     enum CodingKeys: String, CodingKey {
         case plate, status, comments
+        case extraFeesJSON = "extra_fees_json"
         case vehicleID = "vehicle_id"
         case clientID = "client_id"
         case customerName = "customer_name"
@@ -253,6 +262,21 @@ struct BookingInput: Encodable, Equatable {
         try c.encode(paymentMethod, forKey: .paymentMethod)
         try c.encode(bookingSource, forKey: .bookingSource)
         try c.encode(comments.nilIfBlank, forKey: .comments)
+        try c.encode(extraFeesJSON, forKey: .extraFeesJSON)
+    }
+
+    /// −|discount| when the returning-customer switch is on (returningDiscount on the web).
+    var returningDiscount: Double { isReturningCustomer ? -abs(discountAmount) : 0 }
+    var feesTotal: Double { extraFees.reduce(0) { $0 + $1.amount } }
+
+    /// buildSubmitData() › extra_fees_json: the fees plus a "returning-discount" line, or null.
+    var extraFeesJSON: String? {
+        var payload = extraFees
+        let d = returningDiscount
+        if d != 0 {
+            payload.append(ExtraFee(id: ExtraFee.discountID, label: "Έκπτωση παλιού πελάτη (\(Contact.cleanNumber(abs(d)))€)", amount: d))
+        }
+        return ExtraFee.serialize(payload)
     }
 
     init() {}
@@ -273,6 +297,12 @@ struct BookingInput: Encodable, Equatable {
         paymentMethod = b.paymentMethod ?? "cash"
         bookingSource = b.bookingSource ?? "phone"
         comments = b.comments
+        let lines = b.extraFees
+        if let discount = lines.first(where: { $0.id == ExtraFee.discountID }) {
+            isReturningCustomer = true
+            discountAmount = abs(discount.amount)
+        }
+        extraFees = lines.filter { $0.id != ExtraFee.discountID }
     }
 
     /// Same pre-fill as BookingFormPage when opened with ?requestId=.
@@ -307,6 +337,45 @@ struct BookingInput: Encodable, Equatable {
         b.totalPrice = totalPrice; b.depositAmount = depositAmount
         b.deliveryLocation = deliveryLocation.nilIfBlank; b.paymentMethod = paymentMethod
         b.bookingSource = bookingSource; b.comments = comments.nilIfBlank
+        b.extraFeesJSON = extraFeesJSON
+    }
+}
+
+/// One line of bookings.extra_fees_json: `[{"id","label","amount"}]` (ExtraFee in booking-form/utils.ts).
+struct ExtraFee: Codable, Identifiable, Hashable {
+    static let discountID = "returning-discount"
+    var id: String
+    var label: String
+    var amount: Double
+
+    init(id: String = ExtraFee.newID(), label: String, amount: Double) {
+        self.id = id; self.label = label; self.amount = amount
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decode(String.self, forKey: .id)) ?? ExtraFee.newID()
+        label = (try? c.decode(String.self, forKey: .label)) ?? ""
+        if let n = try? c.decode(Double.self, forKey: .amount) { amount = n }
+        else { amount = Double((try? c.decode(String.self, forKey: .amount)) ?? "") ?? 0 }
+    }
+
+    /// Math.random().toString(36).substring(2, 9)
+    static func newID() -> String {
+        let chars = Array("abcdefghijklmnopqrstuvwxyz0123456789")
+        return String((0..<7).map { _ in chars.randomElement()! })
+    }
+
+    static func parse(_ json: String?) -> [ExtraFee] {
+        guard let data = json?.data(using: .utf8), !data.isEmpty else { return [] }
+        return (try? JSONDecoder().decode([ExtraFee].self, from: data)) ?? []
+    }
+
+    static func serialize(_ fees: [ExtraFee]) -> String? {
+        guard !fees.isEmpty else { return nil }
+        let e = JSONEncoder()
+        e.outputFormatting = [.withoutEscapingSlashes]
+        return (try? e.encode(fees)).flatMap { String(data: $0, encoding: .utf8) }
     }
 }
 
@@ -360,6 +429,195 @@ struct RequestStatusUpdate: Encodable {
 
 struct BookingStatusUpdate: Encodable {
     var status: BookingStatus
+}
+
+// MARK: - Vehicle checklists (useVehicleChecklists.ts)
+
+enum ChecklistType: String, Codable, CaseIterable, Identifiable, Hashable {
+    case checkIn = "check_in", checkOut = "check_out"
+    var id: String { rawValue }
+}
+
+struct VehicleChecklist: Codable, Identifiable, Hashable {
+    var id: String
+    var bookingID: String
+    var type: ChecklistType
+    var fuelLevel: Int?
+    var mileage: Int?
+    var damageNotes: String?
+    var photoURLs: [String]?
+    var createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, type, mileage
+        case bookingID = "booking_id"
+        case fuelLevel = "fuel_level"
+        case damageNotes = "damage_notes"
+        case photoURLs = "photo_urls"
+        case createdAt = "created_at"
+    }
+
+    var fuel: Int { fuelLevel ?? 100 }
+    var km: Int { mileage ?? 0 }
+    var photos: [String] { photoURLs ?? [] }
+}
+
+struct ChecklistInput: Encodable {
+    var bookingID: String
+    var type: ChecklistType
+    var fuelLevel: Int
+    var mileage: Int
+    var damageNotes: String?
+    var photoURLs: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case type, mileage
+        case bookingID = "booking_id"
+        case fuelLevel = "fuel_level"
+        case damageNotes = "damage_notes"
+        case photoURLs = "photo_urls"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(bookingID, forKey: .bookingID)
+        try c.encode(type, forKey: .type)
+        try c.encode(fuelLevel, forKey: .fuelLevel)
+        try c.encode(mileage, forKey: .mileage)
+        try c.encode(damageNotes.nilIfBlank, forKey: .damageNotes)
+        try c.encode(photoURLs, forKey: .photoURLs)
+    }
+}
+
+// MARK: - Fleet writes (FleetFormPage, FleetModelDetail, VehicleRatesPage)
+
+/// New model (submitNew() in FleetFormPage.tsx).
+struct VehicleInput: Encodable {
+    var name: String
+    var type: VehicleType
+    var cc: Int
+    var dailyRateLow: Double
+    var dailyRateHigh: Double
+    var quantity: Int
+    var plates: [String]
+    var notes: String?
+    var imageURL: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, type, cc, quantity, plate, plates, notes
+        case dailyRateLow = "daily_rate_low"
+        case dailyRateHigh = "daily_rate_high"
+        case imageURL = "image_url"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        let clean = plates.map(\.trimmed).filter { !$0.isEmpty }
+        try c.encode(name.trimmed, forKey: .name)
+        try c.encode(type, forKey: .type)
+        try c.encode(cc, forKey: .cc)
+        try c.encode(dailyRateLow, forKey: .dailyRateLow)
+        try c.encode(dailyRateHigh, forKey: .dailyRateHigh)
+        try c.encode(quantity, forKey: .quantity)
+        try c.encode(VehicleUpdate.plateString(clean), forKey: .plate)
+        try c.encode(clean.isEmpty ? nil : clean, forKey: .plates)
+        try c.encode(notes.nilIfBlank, forKey: .notes)
+        try c.encode(imageURL.nilIfBlank, forKey: .imageURL)
+    }
+}
+
+/// Partial update of a vehicles row: only the fields that are set are sent. Plates are written as
+/// the comma string the web reads (and mirrored to `plates`).
+struct VehicleUpdate: Encodable {
+    var quantity: Int?
+    var plates: [String]?
+    var notes: String??
+    var active: Bool?
+    var imageURL: String??
+    var slug: String??
+    var showOnSite: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case quantity, plate, plates, notes, active, slug
+        case imageURL = "image_url"
+        case showOnSite = "show_on_site"
+    }
+
+    static func plateString(_ plates: [String]) -> String? {
+        let clean = plates.map(\.trimmed).filter { !$0.isEmpty }
+        return clean.isEmpty ? nil : clean.joined(separator: ", ")
+    }
+
+    /// saveListing() in VehicleRatesPage.tsx.
+    static func cleanSlug(_ raw: String) -> String {
+        // .toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "")
+        var out = ""
+        var inRun = false
+        for ch in raw.trimmed.lowercased() {
+            if ("a"..."z").contains(ch) || ("0"..."9").contains(ch) || ch == "-" {
+                out.append(ch); inRun = false
+            } else if !inRun {
+                out.append("-"); inRun = true
+            }
+        }
+        return out.trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        if let quantity { try c.encode(quantity, forKey: .quantity) }
+        if let plates {
+            let clean = plates.map(\.trimmed).filter { !$0.isEmpty }
+            try c.encode(Self.plateString(clean), forKey: .plate)
+            try c.encode(clean.isEmpty ? nil : clean, forKey: .plates)
+        }
+        if let notes { try c.encode(notes.nilIfBlank, forKey: .notes) }
+        if let active { try c.encode(active, forKey: .active) }
+        if let imageURL { try c.encode(imageURL.nilIfBlank, forKey: .imageURL) }
+        if let slug { try c.encode(slug.nilIfBlank, forKey: .slug) }
+        if let showOnSite { try c.encode(showOnSite, forKey: .showOnSite) }
+    }
+
+    func apply(to v: inout Vehicle) {
+        if let quantity { v.quantity = quantity }
+        if let plates {
+            let clean = plates.map(\.trimmed).filter { !$0.isEmpty }
+            v.plate = Self.plateString(clean); v.plates = clean.isEmpty ? nil : clean
+        }
+        if let notes { v.notes = notes.nilIfBlank }
+        if let active { v.active = active }
+        if let imageURL { v.imageURL = imageURL.nilIfBlank }
+        if let slug { v.slug = slug.nilIfBlank }
+        if let showOnSite { v.showOnSite = showOnSite }
+    }
+}
+
+/// Maintenance block (useCreateVehicleBlock).
+struct BlockInput: Encodable {
+    var vehicleID: String
+    var startDate: String
+    var endDate: String
+    var reason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case reason
+        case vehicleID = "vehicle_id"
+        case startDate = "start_date"
+        case endDate = "end_date"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(vehicleID, forKey: .vehicleID)
+        try c.encode(startDate, forKey: .startDate)
+        try c.encode(endDate, forKey: .endDate)
+        try c.encode(reason.nilIfBlank, forKey: .reason)
+    }
+}
+
+struct ClientIDUpdate: Encodable {
+    let clientID: String
+    enum CodingKeys: String, CodingKey { case clientID = "client_id" }
 }
 
 /// Everything the CRM reads, loaded together like the web's react-query cache.

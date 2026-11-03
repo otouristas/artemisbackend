@@ -5,7 +5,9 @@ struct BookingDetailView: View {
     let bookingID: String
     @State private var editing = false
     @State private var confirmCancel = false
+    @State private var confirmDelete = false
     @State private var busy = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         if let b = store.booking(bookingID) {
@@ -17,12 +19,13 @@ struct BookingDetailView: View {
 
     private func content(_ b: Booking) -> some View {
         let vehicle = store.vehicle(b.vehicleID)
-        return ScrollView {
+        return ScrollViewReader { proxy in ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 hero(b, vehicle)
                 tripCard(b, vehicle)
                 customerCard(b, vehicle)
                 paymentCard(b)
+                ChecklistSection(booking: b)
                 if let notes = b.comments?.nilIfBlank {
                     VStack(alignment: .leading, spacing: 8) {
                         SectionHeader("Σημειώσεις")
@@ -47,6 +50,18 @@ struct BookingDetailView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 28)
         }
+        .task {
+            #if DEBUG
+            // -DemoRoute bookings/checklist(/new) and bookings/delete: scroll to the section for screenshots.
+            if AppConfig.demoRoute == "bookings/edit" { try? await Task.sleep(nanoseconds: 1_600_000_000); editing = true }
+            if let r = AppConfig.demoRoute, r.hasPrefix("bookings/checklist") || r == "bookings/delete" {
+                try? await Task.sleep(nanoseconds: 900_000_000)
+                withAnimation { proxy.scrollTo(r == "bookings/delete" ? "actions" : "checklist", anchor: .top) }
+                if r == "bookings/delete" { try? await Task.sleep(nanoseconds: 500_000_000); confirmDelete = true }
+            }
+            #endif
+        }
+        }
         .background(Color.screen)
         .navigationTitle(b.customerName)
         .navigationBarTitleDisplayMode(.inline)
@@ -55,12 +70,18 @@ struct BookingDetailView: View {
                 Button("Επεξεργασία") { editing = true }
             }
         }
-        .sheet(isPresented: $editing) { BookingFormView(mode: .edit(b)) }
+        .sheet(isPresented: $editing) { BookingFormView(mode: .edit(b), onDeleted: { dismiss() }) }
         .confirmationDialog("Ακύρωση κράτησης;", isPresented: $confirmCancel, titleVisibility: .visible) {
             Button("Ακύρωση κράτησης", role: .destructive) { run { await store.setStatus(b, .cancelled) } }
             Button("Πίσω", role: .cancel) {}
         } message: {
             Text("Η μονάδα θα ελευθερωθεί για τις ημερομηνίες \(Day.shortRange(b.checkIn, b.checkOut)).")
+        }
+        .alert("Διαγραφή κράτησης", isPresented: $confirmDelete) {
+            Button("Διαγραφή", role: .destructive) { delete(b) }
+            Button("Άκυρο", role: .cancel) {}
+        } message: {
+            Text("Είστε σίγουροι ότι θέλετε να διαγράψετε την κράτηση του \(b.customerName)\(vehicle.map { " (\($0.name))" } ?? ""); Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.")
         }
     }
 
@@ -178,6 +199,23 @@ struct BookingDetailView: View {
                 }
                 ProgressView(value: b.total > 0 ? min(b.paid / b.total, 1) : 0)
                     .tint(Color.success)
+                if !b.extraFees.isEmpty {
+                    VStack(spacing: 8) {
+                        ForEach(b.extraFees) { f in
+                            let discount = f.id == ExtraFee.discountID
+                            HStack {
+                                Image(systemName: discount ? "tag.fill" : "plus.circle").foregroundStyle(discount ? Color.success : .secondary).frame(width: 22)
+                                Text(discount ? "Έκπτωση παλιού πελάτη" : f.label).foregroundStyle(discount ? Color.success : .primary)
+                                Spacer()
+                                Text((f.amount >= 0 ? "+" : "") + Money.precise(f.amount)).monospacedDigit().fontWeight(.medium)
+                                    .foregroundStyle(discount ? Color.success : .primary)
+                            }
+                            .font(.subheadline)
+                        }
+                    }
+                    .padding(12)
+                    .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
                 VStack(spacing: 10) {
                     InfoRow(icon: "eurosign.circle", title: "Σύνολο", value: Money.precise(b.total))
                     InfoRow(icon: "banknote", title: "Προκαταβολή", value: Money.precise(b.paid))
@@ -205,9 +243,32 @@ struct BookingDetailView: View {
                 Button { confirmCancel = true } label: { Label("Ακύρωση κράτησης", systemImage: "xmark.circle") }
                     .buttonStyle(SecondaryButtonStyle(tint: .danger))
             }
+            Button(role: .destructive) { confirmDelete = true } label: {
+                Label("Διαγραφή κράτησης", systemImage: "trash")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.danger)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
         }
+        .id("actions")
         .disabled(busy)
         .padding(.top, 4)
+    }
+
+    private func delete(_ b: Booking) {
+        busy = true
+        Task {
+            do {
+                try await store.deleteBooking(b)
+                dismiss()
+            } catch {
+                Haptics.notify(.error)
+                store.show("Σφάλμα κατά τη διαγραφή", error: true)
+            }
+            busy = false
+        }
     }
 
     private func run(_ work: @escaping () async -> Void) {

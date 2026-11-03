@@ -4,6 +4,7 @@ struct FleetView: View {
     @EnvironmentObject private var store: AppStore
     @State private var type: VehicleType?
     @State private var query = ""
+    @State private var addSheet: VehicleFormView.Mode?
 
     private var vehicles: [Vehicle] {
         store.vehicles
@@ -47,6 +48,25 @@ struct FleetView: View {
         .navigationTitle("Στόλος")
         .searchable(text: $query, prompt: "Μοντέλο ή πινακίδα")
         .refreshable { await store.refresh() }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button { addSheet = .new } label: { Label("Νέος τύπος οχήματος", systemImage: "sparkles") }
+                    Button { addSheet = .existing } label: { Label("Μονάδες σε υπάρχον μοντέλο", systemImage: "square.stack.3d.up") }
+                } label: { Image(systemName: "plus.circle.fill").font(.title3) }
+                .accessibilityLabel("Προσθήκη οχήματος")
+            }
+        }
+        .sheet(item: $addSheet) { mode in VehicleFormView(mode: mode) }
+        .onChange(of: store.hasLoaded) { _, loaded in if loaded { openDemoSheet() } }
+        .onAppear { if store.hasLoaded { openDemoSheet() } }
+    }
+
+    /// DEBUG screenshots: -DemoRoute fleet/new or fleet/units.
+    private func openDemoSheet() {
+        guard addSheet == nil else { return }
+        if AppConfig.demoRoute == "fleet/new" { addSheet = .new }
+        if AppConfig.demoRoute == "fleet/units" { addSheet = .existing }
     }
 
     private var summary: some View {
@@ -83,6 +103,8 @@ struct VehicleCard: View {
                 HStack {
                     Text(vehicle.name).font(.headline).lineLimit(1)
                     if !vehicle.active { StatusPill(text: "Ανενεργό", color: .secondary) }
+                    else if !store.activeBlocks(vehicle).isEmpty { StatusPill(text: "Συντήρηση", color: .danger, icon: "wrench.and.screwdriver") }
+                    else if vehicle.showOnSite == false { StatusPill(text: "Εκτός site", color: .secondary, icon: "eye.slash") }
                 }
                 Text("\(Labels.vehicleType(vehicle.type)) · \(vehicle.cc) cc").font(.caption).foregroundStyle(.secondary)
                 HStack(spacing: 8) {

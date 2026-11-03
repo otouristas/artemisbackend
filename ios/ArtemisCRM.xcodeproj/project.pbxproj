@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		00717B4E36F96D71B29E7373 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92CFD9AB3145842B76F7A007 /* NotificationManager.swift */; };
 		00F45AF2B2C65940F3A257AA /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE95727CB97E2D53465FE212 /* MainTabView.swift */; };
+		0AA7E14BA73872E9741E6AAD /* ChecklistViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7388D2A60759C3371406F6A1 /* ChecklistViews.swift */; };
+		15DE1C3BDE572D6D26F69A57 /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0377B80490739309856BCE7 /* Brand.swift */; };
 		1C602D33216D335A973D3D2C /* Backend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 301D4863973111C212DAE718 /* Backend.swift */; };
 		1E20AA9B24843DDC8D86AA53 /* BookingFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBFB0F1C53FEEBD6D2605480 /* BookingFormView.swift */; };
 		329028A59684813974D89E18 /* FleetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE3C202FAA1A148C55361BA0 /* FleetView.swift */; };
@@ -16,6 +18,7 @@
 		3662B76446304D9D618363E5 /* BookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1594D12D51FCEBB3E40BA0E2 /* BookingsView.swift */; };
 		3E6AAC148E0B24717F54CFF7 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB63F6B8CC1DF938982C8075 /* Models.swift */; };
 		4EC37E22C159C69737C1340D /* DemoBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122BB1B05159679C4508E1C1 /* DemoBackend.swift */; };
+		4F2165E258AFDA182081B21B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 886E2FCC2F5472FC18B096DF /* LaunchScreen.storyboard */; };
 		5C542D8BF2EC5CE690F6BB2A /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84FD15F726D5816DA5C52BA0 /* MoreView.swift */; };
 		5D35FDD9A1C7DB8F7028E6B8 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26AB187567DD0B9FDE67D150 /* DemoData.swift */; };
 		6938AA3C49800958747C291A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E37B617ED4B7DA914CC52B8 /* SettingsView.swift */; };
@@ -30,7 +33,9 @@
 		C1EF2EE347FD1C14520F3E75 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 18948849B72BACBE4F5AB3E1 /* Assets.xcassets */; };
 		CBA833409F1696ED43A4487B /* MoneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0C41149742ACB5F841BF968 /* MoneyView.swift */; };
 		CEAAC0CE18451D7827D6D597 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 9F71701C27D377F61E2BC29B /* Supabase */; };
+		D11A8AA8FF2747721892C978 /* VehicleFormViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C756AE36C83E999A722B4865 /* VehicleFormViews.swift */; };
 		D2C9A1C403E2CB90C0D62263 /* RequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F53F12B12EB39682876F6DD7 /* RequestsView.swift */; };
+		D7C7D436A2CE846CF7E3363B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC63B64A7C1BCDB2F81F3F4 /* OnboardingView.swift */; };
 		E89CDC3E23EA97405262A2C2 /* RequestDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D85FEB02653FABAC7C516BBD /* RequestDetailView.swift */; };
 		FFA976C05FB245D66DFDBCC9 /* BookingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FD24BF74025BD4ECEB0AC06 /* BookingDetailView.swift */; };
 /* End PBXBuildFile section */
@@ -46,22 +51,27 @@
 		301D4863973111C212DAE718 /* Backend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Backend.swift; sourceTree = "<group>"; };
 		3A8A77D2BEEEB393A5EE7D32 /* TripCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripCard.swift; sourceTree = "<group>"; };
 		69BC082BEDD40878539E03CB /* VehicleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleDetailView.swift; sourceTree = "<group>"; };
+		7388D2A60759C3371406F6A1 /* ChecklistViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChecklistViews.swift; sourceTree = "<group>"; };
 		798311D4EF6186A78B0C607A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		84FD15F726D5816DA5C52BA0 /* MoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreView.swift; sourceTree = "<group>"; };
+		886E2FCC2F5472FC18B096DF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		8E37B617ED4B7DA914CC52B8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		92CFD9AB3145842B76F7A007 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		9DA023D4EFCF1EB575B66284 /* ArtemisCRMApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtemisCRMApp.swift; sourceTree = "<group>"; };
 		AAC4534386AD0E94E043ADA9 /* BusinessLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusinessLogic.swift; sourceTree = "<group>"; };
 		B4FD9287773473F917968071 /* SupabaseBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBackend.swift; sourceTree = "<group>"; };
 		C0C41149742ACB5F841BF968 /* MoneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyView.swift; sourceTree = "<group>"; };
+		C756AE36C83E999A722B4865 /* VehicleFormViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleFormViews.swift; sourceTree = "<group>"; };
 		C827C8F72AA2543F6AA1D6BD /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		C98AE745A0249B280BF31457 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		CBFB0F1C53FEEBD6D2605480 /* BookingFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingFormView.swift; sourceTree = "<group>"; };
 		CE3C202FAA1A148C55361BA0 /* FleetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetView.swift; sourceTree = "<group>"; };
 		CE95727CB97E2D53465FE212 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		D85FEB02653FABAC7C516BBD /* RequestDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestDetailView.swift; sourceTree = "<group>"; };
+		DDC63B64A7C1BCDB2F81F3F4 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		E0A8949EF81460FA2B086E08 /* ArtemisCRM.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ArtemisCRM.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EB63F6B8CC1DF938982C8075 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		F0377B80490739309856BCE7 /* Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Brand.swift; sourceTree = "<group>"; };
 		F478B13BECD87C7C8E901662 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		F53F12B12EB39682876F6DD7 /* RequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -81,6 +91,7 @@
 		00C9D2DC5D0879222DF26495 /* Design */ = {
 			isa = PBXGroup;
 			children = (
+				F0377B80490739309856BCE7 /* Brand.swift */,
 				C827C8F72AA2543F6AA1D6BD /* Theme.swift */,
 				3A8A77D2BEEEB393A5EE7D32 /* TripCard.swift */,
 			);
@@ -94,6 +105,7 @@
 				5566E7E87362DE031E505AA7 /* Fleet */,
 				B6BB946D65F42F1CDE38A116 /* Login */,
 				CA21A7724E03076DBF07E713 /* More */,
+				BE9E5C7D1A9980CEBB3490D0 /* Onboarding */,
 				0FF8C1CDA1EA398AF1041699 /* Requests */,
 				34088005D4BE0827866EB342 /* Today */,
 			);
@@ -146,6 +158,7 @@
 			children = (
 				CE3C202FAA1A148C55361BA0 /* FleetView.swift */,
 				69BC082BEDD40878539E03CB /* VehicleDetailView.swift */,
+				C756AE36C83E999A722B4865 /* VehicleFormViews.swift */,
 			);
 			path = Fleet;
 			sourceTree = "<group>";
@@ -180,6 +193,7 @@
 				0FD24BF74025BD4ECEB0AC06 /* BookingDetailView.swift */,
 				CBFB0F1C53FEEBD6D2605480 /* BookingFormView.swift */,
 				1594D12D51FCEBB3E40BA0E2 /* BookingsView.swift */,
+				7388D2A60759C3371406F6A1 /* ChecklistViews.swift */,
 			);
 			path = Bookings;
 			sourceTree = "<group>";
@@ -198,8 +212,17 @@
 				0DB5DD3DD8501072AE9AEB5D /* ArtemisCRM.entitlements */,
 				18948849B72BACBE4F5AB3E1 /* Assets.xcassets */,
 				08B3905DD26283C7AD27C268 /* Info.plist */,
+				886E2FCC2F5472FC18B096DF /* LaunchScreen.storyboard */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		BE9E5C7D1A9980CEBB3490D0 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				DDC63B64A7C1BCDB2F81F3F4 /* OnboardingView.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		CA21A7724E03076DBF07E713 /* More */ = {
@@ -306,6 +329,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C1EF2EE347FD1C14520F3E75 /* Assets.xcassets in Resources */,
+				4F2165E258AFDA182081B21B /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -322,7 +346,9 @@
 				FFA976C05FB245D66DFDBCC9 /* BookingDetailView.swift in Sources */,
 				1E20AA9B24843DDC8D86AA53 /* BookingFormView.swift in Sources */,
 				3662B76446304D9D618363E5 /* BookingsView.swift in Sources */,
+				15DE1C3BDE572D6D26F69A57 /* Brand.swift in Sources */,
 				A7CFB7A65907BAEDB0DE83C5 /* BusinessLogic.swift in Sources */,
+				0AA7E14BA73872E9741E6AAD /* ChecklistViews.swift in Sources */,
 				4EC37E22C159C69737C1340D /* DemoBackend.swift in Sources */,
 				5D35FDD9A1C7DB8F7028E6B8 /* DemoData.swift in Sources */,
 				329028A59684813974D89E18 /* FleetView.swift in Sources */,
@@ -332,6 +358,7 @@
 				CBA833409F1696ED43A4487B /* MoneyView.swift in Sources */,
 				5C542D8BF2EC5CE690F6BB2A /* MoreView.swift in Sources */,
 				00717B4E36F96D71B29E7373 /* NotificationManager.swift in Sources */,
+				D7C7D436A2CE846CF7E3363B /* OnboardingView.swift in Sources */,
 				E89CDC3E23EA97405262A2C2 /* RequestDetailView.swift in Sources */,
 				D2C9A1C403E2CB90C0D62263 /* RequestsView.swift in Sources */,
 				6938AA3C49800958747C291A /* SettingsView.swift in Sources */,
@@ -340,6 +367,7 @@
 				6A83A22D8D5DB90D43F94A9D /* TodayView.swift in Sources */,
 				A54D3DC2D7BEB5137ACFCAFD /* TripCard.swift in Sources */,
 				B12F5543BBF4711BF9879553 /* VehicleDetailView.swift in Sources */,
+				D11A8AA8FF2747721892C978 /* VehicleFormViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -351,6 +379,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ArtemisCRM/Resources/ArtemisCRM.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = ArtemisCRM/Resources/Info.plist;
@@ -371,6 +400,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ArtemisCRM/Resources/ArtemisCRM.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = ArtemisCRM/Resources/Info.plist;

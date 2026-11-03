@@ -11,8 +11,14 @@ struct BookingFormView: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
     let mode: Mode
+    /// Edit mode: called after the booking was deleted from the form (the detail screen pops).
+    var onDeleted: (() -> Void)?
 
     @State private var input = BookingInput()
+    @State private var newFeeLabel = ""
+    @State private var newFeeAmount: Double?
+    @State private var confirmDelete = false
+    @FocusState private var feeFocus: Bool
     @State private var manualPrice = false
     @State private var saving = false
     @State private var error: String?
@@ -45,6 +51,7 @@ struct BookingFormView: View {
 
     var body: some View {
         NavigationStack {
+            ScrollViewReader { proxy in
             Form {
                 if let r = sourceRequest {
                     Section {
@@ -60,11 +67,30 @@ struct BookingFormView: View {
                 vehicleSection
                 datesSection
                 customerSection
-                priceSection
+                priceSection.id("price")
+                extrasSection
+                paymentSection
                 detailsSection
+                if editingBooking != nil, onDeleted != nil {
+                    Section {
+                        Button(role: .destructive) { confirmDelete = true } label: {
+                            Label("Διαγραφή κράτησης", systemImage: "trash").frame(maxWidth: .infinity)
+                        }
+                    }
+                }
                 if let error {
                     Section { Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Color.danger).font(.subheadline) }
                 }
+            }
+            .task {
+                #if DEBUG
+                // -DemoRoute bookings/edit: show the price, fees and discount for screenshots.
+                if AppConfig.demoRoute == "bookings/edit" {
+                    try? await Task.sleep(nanoseconds: 900_000_000)
+                    withAnimation { proxy.scrollTo("price", anchor: .top) }
+                }
+                #endif
+            }
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -83,6 +109,12 @@ struct BookingFormView: View {
             } message: {
                 Text("Για αυτές τις ημερομηνίες όλες οι μονάδες του \(vehicle?.name ?? "μοντέλου") είναι δεσμευμένες (\(conflicts.count) κρατήσεις).")
             }
+            .alert("Διαγραφή κράτησης", isPresented: $confirmDelete) {
+                Button("Διαγραφή", role: .destructive, action: deleteBooking)
+                Button("Άκυρο", role: .cancel) {}
+            } message: {
+                Text("Είστε σίγουροι ότι θέλετε να διαγράψετε την κράτηση του \(editingBooking?.customerName ?? "")\(vehicle.map { " (\($0.name))" } ?? ""); Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.")
+            }
             .onAppear(perform: setup)
             .onChange(of: input.vehicleID) { _, _ in autoPrice(); validatePlate() }
             .onChange(of: input.checkIn) { _, new in
@@ -91,6 +123,9 @@ struct BookingFormView: View {
             }
             .onChange(of: input.checkOut) { _, _ in autoPrice(); validatePlate() }
             .onChange(of: manualPrice) { _, manual in if !manual { autoPrice() } }
+            .onChange(of: input.extraFees) { _, _ in autoPrice() }
+            .onChange(of: input.isReturningCustomer) { _, on in if !on { input.discountAmount = 0 }; autoPrice() }
+            .onChange(of: input.discountAmount) { _, _ in autoPrice() }
         }
         .interactiveDismissDisabled(saving)
     }
@@ -183,29 +218,105 @@ struct BookingFormView: View {
         }
     }
 
+    /// Base rental price from vehicle_rates (0 when some night has no period, as on the web).
+    private var baseTotal: Double { breakdown.map { $0.available ? $0.baseTotal : 0 } ?? 0 }
+    /// autoCalculatedTotal = baseTotal + feesTotal + returningDiscount
+    private var autoTotal: Double { baseTotal + input.feesTotal + input.returningDiscount }
+
     private var priceSection: some View {
         Section {
-            if let breakdown {
-                if breakdown.available {
-                    ForEach(breakdown.segments, id: \.self) { s in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(s.label).font(.subheadline)
-                                Text("\(s.days) × \(Money.precise(s.rate))").font(.caption).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Text(Money.precise(s.subtotal)).monospacedDigit()
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Ενοικίαση" + (vehicle.map { " · \($0.name)" } ?? "")).font(.subheadline.weight(.medium))
+                    Group {
+                        if let breakdown, breakdown.available {
+                            Text(breakdown.segments.map { "\($0.label) \($0.days)×\(Money.precise($0.rate))" }.joined(separator: " · "))
+                        } else if breakdown != nil {
+                            Text("Δεν υπάρχει τιμοκατάλογος για αυτές τις ημερομηνίες")
+                        } else {
+                            Text("Επιλέξτε όχημα και ημερομηνίες")
                         }
                     }
-                    HStack {
-                        Text("Αυτόματη τιμή").fontWeight(.semibold)
-                        Spacer()
-                        Text(Money.precise(breakdown.baseTotal)).fontWeight(.semibold).monospacedDigit()
-                    }
-                } else {
-                    Label("Δεν υπάρχει τιμή για όλες τις ημέρες. Ορίστε τιμή χειροκίνητα.", systemImage: "info.circle")
-                        .font(.footnote).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(.secondary)
                 }
+                Spacer()
+                Text(Money.precise(baseTotal)).fontWeight(.semibold).monospacedDigit()
+            }
+        } header: { Text("Τιμή") }
+    }
+
+    private var extrasSection: some View {
+        Section {
+            ForEach(input.extraFees) { fee in
+                HStack {
+                    Text(fee.label).font(.subheadline).lineLimit(1)
+                    Spacer()
+                    Text("+" + Money.precise(fee.amount)).font(.subheadline.weight(.semibold)).monospacedDigit()
+                    Button {
+                        withAnimation { input.extraFees.removeAll { $0.id == fee.id } }
+                    } label: { Image(systemName: "trash").foregroundStyle(Color.danger) }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Αφαίρεση \(fee.label)")
+                }
+            }
+            .onDelete { input.extraFees.remove(atOffsets: $0) }
+            HStack(spacing: 8) {
+                TextField("Πρόσθετη χρέωση, π.χ. Παιδικό κάθισμα", text: $newFeeLabel)
+                    .font(.subheadline)
+                    .focused($feeFocus)
+                    .submitLabel(.done)
+                    .onSubmit(addFee)
+                TextField("0", value: $newFeeAmount, format: .number.precision(.fractionLength(0...2)))
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 64)
+                Text("€").foregroundStyle(.secondary)
+                Button(action: addFee) { Image(systemName: "plus.circle.fill").font(.title3) }
+                    .buttonStyle(.borderless)
+                    .disabled(newFeeLabel.trimmed.isEmpty || newFeeAmount == nil)
+                    .accessibilityLabel("Προσθήκη χρέωσης")
+            }
+            Toggle(isOn: $input.isReturningCustomer.animation()) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Παλιός πελάτης — Έκπτωση")
+                    Text("Αφαιρείται από τη βασική τιμή ενοικίασης.").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if input.isReturningCustomer {
+                HStack {
+                    Image(systemName: "tag.fill").foregroundStyle(Color.success)
+                    Text("Ποσό έκπτωσης")
+                    Spacer()
+                    TextField("π.χ. 15", value: $input.discountAmount, format: .number.precision(.fractionLength(0...2)))
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 90)
+                    Text("€").foregroundStyle(.secondary)
+                }
+                if input.discountAmount > 0 {
+                    HStack {
+                        Text("Έκπτωση παλιού πελάτη").foregroundStyle(Color.success)
+                        Spacer()
+                        Text(Money.precise(input.returningDiscount)).fontWeight(.semibold).monospacedDigit().foregroundStyle(Color.success)
+                    }
+                    .font(.subheadline)
+                }
+            }
+        } header: { Text("Πρόσθετες χρεώσεις & έκπτωση") } footer: {
+            if input.isReturningCustomer && input.discountAmount > 0 {
+                Text("-\(Contact.cleanNumber(input.discountAmount))€ από \(baseTotal > 0 ? Contact.cleanNumber(baseTotal) + "€" : "τη βασική τιμή")")
+            } else {
+                Text("Οι χρεώσεις αποθηκεύονται στην κράτηση και μπαίνουν στο σύνολο.")
+            }
+        }
+    }
+
+    private var paymentSection: some View {
+        Section {
+            HStack {
+                Text("Αυτόματη τιμή").fontWeight(.semibold)
+                Spacer()
+                Text(Money.precise(autoTotal)).fontWeight(.semibold).monospacedDigit()
             }
             Toggle("Χειροκίνητη τιμή", isOn: $manualPrice)
             HStack {
@@ -231,13 +342,21 @@ struct BookingFormView: View {
             Picker("Τρόπος πληρωμής", selection: $input.paymentMethod) {
                 ForEach(Labels.paymentMethods, id: \.key) { Text($0.label).tag($0.key) }
             }
-        } header: { Text("Τιμή & πληρωμή") } footer: {
+        } header: { Text("Πληρωμή") } footer: {
             if input.depositAmount > input.totalPrice {
                 Text("Η προκαταβολή δεν μπορεί να υπερβαίνει το συνολικό ποσό").foregroundStyle(Color.danger)
             } else {
                 Text("Υπόλοιπο προς είσπραξη: \(Money.precise(max(input.totalPrice - input.depositAmount, 0)))")
             }
         }
+    }
+
+    private func addFee() {
+        guard !newFeeLabel.trimmed.isEmpty, let amount = newFeeAmount else { return }
+        withAnimation { input.extraFees.append(ExtraFee(label: newFeeLabel.trimmed, amount: amount)) }
+        newFeeLabel = ""
+        newFeeAmount = nil
+        Haptics.tap()
     }
 
     private var detailsSection: some View {
@@ -283,9 +402,26 @@ struct BookingFormView: View {
         }
     }
 
+    /// useEffect on autoCalculatedTotal: only when not manual and the total is positive.
     private func autoPrice() {
-        guard !manualPrice, let b = breakdown, b.available, b.baseTotal > 0 else { return }
-        input.totalPrice = b.baseTotal
+        guard !manualPrice, autoTotal > 0 else { return }
+        input.totalPrice = autoTotal
+    }
+
+    private func deleteBooking() {
+        guard let b = editingBooking else { return }
+        saving = true
+        Task {
+            do {
+                try await store.deleteBooking(b)
+                dismiss()
+                onDeleted?()
+            } catch {
+                Haptics.notify(.error)
+                self.error = "Σφάλμα κατά τη διαγραφή"
+            }
+            saving = false
+        }
     }
 
     private func validatePlate() {

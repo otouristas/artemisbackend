@@ -2,7 +2,15 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject private var auth: AuthManager
-    @State private var email = ""
+    /// Prefilled like LoginPage.tsx (useState(ALLOWED_ADMIN_EMAIL)).
+    @State private var email: String = {
+        #if DEBUG
+        // Screenshots: `-DemoLoginEmail info@artemisrentals.gr` shows the near-miss hint.
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-DemoLoginEmail"), i + 1 < args.count { return args[i + 1] }
+        #endif
+        return AppConfig.allowedAdminEmail
+    }()
     @State private var password = ""
     @State private var showPassword = false
     @State private var busy = false
@@ -102,6 +110,29 @@ struct LoginView: View {
                 }
             }
 
+            if AppConfig.isNearMissAdmin(email) {
+                HStack(spacing: 10) {
+                    Image(systemName: "lightbulb.fill").foregroundStyle(Color.sun)
+                    Text("Το σωστό email είναι \(AppConfig.allowedAdminEmail)")
+                        .font(.footnote.weight(.medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 4)
+                    Button("Διόρθωση") {
+                        Haptics.tap()
+                        email = AppConfig.allowedAdminEmail
+                        error = nil
+                        focus = .password
+                    }
+                    .font(.footnote.weight(.bold))
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.sun)
+                    .controlSize(.small)
+                }
+                .padding(10)
+                .background(Color.sun.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
             if let error {
                 Label(error, systemImage: "exclamationmark.circle.fill")
                     .font(.footnote.weight(.medium))
@@ -121,6 +152,7 @@ struct LoginView: View {
         }
         .card(padding: 22)
         .animation(.easeInOut(duration: 0.2), value: error)
+        .animation(.easeInOut(duration: 0.2), value: AppConfig.isNearMissAdmin(email))
     }
 
     private var footer: some View {
@@ -149,6 +181,13 @@ struct LoginView: View {
 
     private func submit() {
         guard !busy, !email.isEmpty, !password.isEmpty else { return }
+        // Trim + lowercase like isAllowedAdminEmail(); a near miss gets the fix hint, not a sign-in attempt.
+        email = AppConfig.normalizedEmail(email)
+        if AppConfig.isNearMissAdmin(email) {
+            error = "Το σωστό email είναι \(AppConfig.allowedAdminEmail)"
+            Haptics.notify(.warning)
+            return
+        }
         focus = nil
         busy = true
         error = nil

@@ -7,6 +7,7 @@ import Foundation
 final class DemoBackend: Backend {
     let isDemo = true
     private var data = DemoData.make()
+    private lazy var checklists = DemoData.checklists(for: data)
     private var continuation: AsyncStream<ChangeEvent>.Continuation?
 
     private func latency() async { try? await Task.sleep(nanoseconds: 450_000_000) }
@@ -61,6 +62,73 @@ final class DemoBackend: Backend {
         return c
     }
 
+    func deleteBooking(id: String) async throws {
+        await latency()
+        data.bookings.removeAll { $0.id == id }
+        checklists.removeAll { $0.bookingID == id }   // ON DELETE CASCADE
+        for i in data.requests.indices where data.requests[i].bookingID == id { data.requests[i].bookingID = nil } // SET NULL
+    }
+
+    func mergeClients(keepID: String, mergeID: String) async throws {
+        await latency()
+        for i in data.bookings.indices where data.bookings[i].clientID == mergeID { data.bookings[i].clientID = keepID }
+        data.clients.removeAll { $0.id == mergeID }
+    }
+
+    func fetchChecklists(bookingID: String) async throws -> [VehicleChecklist] {
+        await latency()
+        return checklists.filter { $0.bookingID == bookingID }.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func createChecklist(_ input: ChecklistInput) async throws -> VehicleChecklist {
+        await latency()
+        let c = VehicleChecklist(id: UUID().uuidString.lowercased(), bookingID: input.bookingID, type: input.type, fuelLevel: input.fuelLevel,
+                                 mileage: input.mileage, damageNotes: input.damageNotes.nilIfBlank, photoURLs: input.photoURLs, createdAt: ISO.string(Date()))
+        checklists.append(c)
+        return c
+    }
+
+    /// Writes the photo to Caches so the app shows it like a bucket URL.
+    func uploadVehiclePhoto(_ jpeg: Data) async throws -> String {
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        return try DemoData.storePhoto(jpeg, name: "\(Int(Date().timeIntervalSince1970 * 1000))_\(UUID().uuidString.prefix(6).lowercased()).jpg")
+    }
+
+    func createVehicle(_ input: VehicleInput) async throws -> Vehicle {
+        await latency()
+        let clean = input.plates.map(\.trimmed).filter { !$0.isEmpty }
+        let v = Vehicle(id: UUID().uuidString.lowercased(), name: input.name.trimmed, type: input.type, cc: input.cc, quantity: input.quantity,
+                        plate: VehicleUpdate.plateString(clean), plates: clean.isEmpty ? nil : clean, imageURL: input.imageURL.nilIfBlank,
+                        active: true, slug: nil, notes: input.notes.nilIfBlank, showOnSite: true,
+                        dailyRateLow: input.dailyRateLow, dailyRateHigh: input.dailyRateHigh)
+        data.vehicles.append(v)
+        data.vehicles.sort { $0.name < $1.name }
+        return v
+    }
+
+    func updateVehicle(id: String, _ update: VehicleUpdate) async throws -> Vehicle {
+        await latency()
+        guard let i = data.vehicles.firstIndex(where: { $0.id == id }) else { throw BackendError.message("Δεν βρέθηκε το όχημα") }
+        if let slug = update.slug, let s = slug.nilIfBlank, data.vehicles.contains(where: { $0.id != id && $0.slug == s }) {
+            throw BackendError.slugTaken
+        }
+        update.apply(to: &data.vehicles[i])
+        return data.vehicles[i]
+    }
+
+    func createBlock(_ input: BlockInput) async throws -> VehicleBlock {
+        await latency()
+        let b = VehicleBlock(id: UUID().uuidString.lowercased(), vehicleID: input.vehicleID, startDate: input.startDate, endDate: input.endDate, reason: input.reason.nilIfBlank)
+        data.blocks.append(b)
+        data.blocks.sort { $0.startDate < $1.startDate }
+        return b
+    }
+
+    func deleteBlock(id: String) async throws {
+        await latency()
+        data.blocks.removeAll { $0.id == id }
+    }
+
     func createRate(_ input: RateInput) async throws -> VehicleRate {
         await latency()
         try checkOverlap(input, excluding: nil)
@@ -102,6 +170,6 @@ final class DemoBackend: Backend {
     }
 
     func stopChanges() async { continuation?.finish(); continuation = nil }
-    func saveDeviceToken(_ token: String) async {}
+    func saveDeviceToken(_ token: String) async throws {}
 }
 #endif

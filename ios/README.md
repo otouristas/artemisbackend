@@ -9,14 +9,31 @@ SwiftUI, iOS 17+, Swift 5 language mode, `supabase-swift` 2.x via Swift Package 
 | Tab | What it does |
 | --- | --- |
 | **Σήμερα** | Date header, KPIs (αφίξεις, αναχωρήσεις, εκκρεμείς, ανοιχτά υπόλοιπα), today's pickups and returns as trip cards with call and WhatsApp buttons, a callout for new website requests, and the next 7 days. |
-| **Κρατήσεις** | Επερχόμενες / Σε ενοικίαση / Ιστορικό tabs, grouped by day, search, swipe (confirm, WhatsApp, call, cancel), context menus. Booking detail shows the trip, the customer, payment (total, deposit, balance) and confirm/cancel. The form creates and edits bookings. It shows the free units per model for the chosen dates, a plate picker that marks plates already taken, the client (existing, or created on save like the web), and an automatic price from `vehicle_rates` that you can override. |
+| **Κρατήσεις** | Επερχόμενες / Σε ενοικίαση / Ιστορικό tabs, grouped by day, search, swipe (confirm, WhatsApp, call, cancel), context menus. Booking detail shows the trip, the customer, payment (total, extra fee lines, deposit, balance), the **vehicle checklists**, confirm/cancel and **delete** (with confirmation, also in the edit form). The form creates and edits bookings. It shows the free units per model for the chosen dates, a plate picker that marks plates already taken, the client (existing, or created on save like the web), an automatic price from `vehicle_rates`, **extra fee lines and the returning-customer discount** (stored in `extra_fees_json`, included in the automatic total), and a manual override. |
 | **Αιτήματα** | Website requests. Νέα / Ελεγμένα / Αποδεκτά / Απορριφθέντα / Όλα, with a badge on the tab showing how many are new. The detail shows the trip, the guest's message, contact buttons, and availability (free units, clashing bookings, alternative models). **Αποδοχή** opens the booking form pre-filled. Saving creates the booking and sets the request to `accepted` with its `booking_id`. You can also reject a request or mark it reviewed. |
-| **Στόλος** | Model cards with photo, units free today (x/y) and today's price. Model detail shows units and plates (busy or free today), a 14-day availability strip, upcoming bookings, and the price periods. You can add, edit or delete periods in the app; overlaps are rejected, as in the database. |
-| **Περισσότερα** | Πελάτες (search, history, totals), Οικονομικά (season total, collected vs open, monthly Swift Charts bars, payment methods, open balances), Ρυθμίσεις (notification status and toggle, test notification, background/push status, sign out, version). |
+| **Στόλος** | Model cards with photo, units free today (x/y), today's price and a maintenance / off-site pill. **+** adds a new model (name, type, cc, low/high rate, photo URL, quantity and a plate per unit, notes) or more units to an existing model. Model detail shows every unit today (on rent, free, or held by maintenance), a 14-day availability strip, **maintenance blocks** (create, delete, active/planned/done), upcoming bookings, and the price periods (add, edit, delete; overlaps are rejected, as in the database). **Επεξεργασία** edits quantity and plates per unit, notes, active, photo URL, and the site listing (slug + show on site). |
+| **Περισσότερα** | Πελάτες (search, history, totals, **merge duplicates**: profiles with the same phone, last 10 digits, can be merged into the open one), Οικονομικά (season total, collected vs open, monthly Swift Charts bars, payment methods, open balances), Ρυθμίσεις (appearance, notification status and toggle, test notification, background/push status, sign out, version). |
 
 Availability follows `public.site_vehicle_availability()`. A pending or confirmed booking holds one unit
 from check-in through the return day **inclusive**, and each `vehicle_blocks` row holds one unit. Price is
 the sum of the nightly rates, with nights = check_out − check_in, as in `src/lib/ratePricing.ts`.
+
+### Web logic the new features follow
+
+* **Checklists** (`VehicleChecklist.tsx`, `useVehicleChecklists.ts`): rows in `vehicle_checklists` per booking, type `check_in` (Παράδοση) / `check_out` (Παραλαβή), fuel 0–100 in steps of 5, mileage, damage notes, photos. The form defaults to the missing step. Photos are resized (longest side 1600 px, JPEG 0.8), uploaded to the public `vehicle-photos` bucket as `<ms>_<random>.jpg` at the root, and their public URLs stored in `photo_urls`. With both steps recorded the card shows the km driven and the fuel difference. Photos open full screen. You can pick from the library or use the camera.
+* **Client merge** (`MergeDuplicatesCard.tsx`, `useMergeClients`): duplicates are other clients whose phone has the same last 10 digits (at least 6). Merging moves `bookings.client_id` to the open profile, then deletes the duplicate.
+* **Models and plates** (`FleetFormPage.tsx`, `FleetModelDetail.tsx`, `VehicleRatesPage.tsx`): plates are written as the comma string `plate` the web reads first (and mirrored to `plates`); the app now reads `plate` first like `parsePlates()`. Adding units appends plates and raises `quantity`. Quantity is 1–50. The slug is cleaned like `saveListing()`, and a duplicate slug shows "Το slug χρησιμοποιείται ήδη από άλλο όχημα". New models get no slug, like the web: set it in Επεξεργασία to show the model on the site.
+* **Maintenance blocks** (`useVehicleBlocks.ts`): insert/delete in `vehicle_blocks`. Each block holds one unit from start to end date inclusive, the same as a booking, in the app and in the site functions.
+* **Extra fees and discount** (`BookingFormPage.tsx`): `extra_fees_json` is `[{"id","label","amount"}]`; the discount is the line with id `returning-discount`, label `Έκπτωση παλιού πελάτη (X€)` and a negative amount; null when empty. Automatic total = rental + fees + discount, applied only when the price is not manual and the total is positive. Edits start in manual price mode, like the web.
+* **Delete booking**: `delete from bookings`; the database cascades its checklists and clears `booking_requests.booking_id`.
+
+## Brand, launch, onboarding, appearance
+
+* The Artemis Rental logo (`src/assets/logo.svg`, white variant from the website's brand folder) is in the asset catalog as vectors: `BrandLogo` (blue, white in dark mode), `Logo` (white template, splash and login) and `BrandSymbol` (bow and arrow). The SVGs were rewritten with inline fill/stroke attributes, because the asset compiler ignores CSS `<style>` classes. It appears in the Today header (top-left), on the login screen, in Περισσότερα and in Ρυθμίσεις.
+* `Resources/LaunchScreen.storyboard`: navy with the white logo. Then the in-app splash (logo scale and fade, about 0.9 s) while the session restores.
+* Onboarding: four pages on the first launch, before login (Σήμερα, Αιτήματα από το site, Στόλος & τιμές, Ειδοποιήσεις). The last page asks for notification permission, offers the appearance choice and leads to Σύνδεση. Completion is stored in UserDefaults (`onboarding.completed.v1`).
+* Appearance: Ρυθμίσεις › Εμφάνιση (Αυτόματο / Φωτεινό / Σκούρο), stored with `@AppStorage("appearance")`, default Φωτεινό, applied at the root so it reaches every screen and sheet.
+* Login: the email field is prefilled with `info@artemisrental.gr` (like `LoginPage.tsx`), the email is trimmed and lowercased before the check, and a near miss (up to 2 typos, e.g. `info@artemisrentals.gr`) shows "Το σωστό email είναι info@artemisrental.gr" with a one-tap fix instead of trying to sign in. The password is never stored or logged by the app.
 
 ## Build & run
 
@@ -52,10 +69,16 @@ In Xcode: Product › Scheme › Edit Scheme › Run › Arguments, and tick `-D
 Extra DEBUG arguments:
 
 * `-DemoSimulateRequest` makes a new website request "arrive" 4 seconds after launch. Use it to see the in-app banner, the local notification and the tab badge.
-* `-DemoRoute <route>` opens a screen directly, for screenshots: `today`, `today/new`, `bookings`, `bookings/detail`, `requests`, `requests/detail`, `requests/accept`, `fleet`, `fleet/detail`, `more`, `more/clients`, `more/client`, `more/money`, `more/settings`.
+* `-DemoRoute <route>` opens a screen directly, for screenshots: `today`, `today/new`, `bookings`, `bookings/detail`, `bookings/checklist`, `bookings/checklist/new`, `bookings/edit`, `bookings/delete`, `requests`, `requests/detail`, `requests/accept`, `fleet`, `fleet/detail`, `fleet/maintenance`, `fleet/block`, `fleet/edit`, `fleet/new`, `fleet/units`, `more`, `more/clients`, `more/client`, `more/client/merge`, `more/money`, `more/settings`.
+* `-DemoAppearance system|light|dark` sets the stored appearance before launch.
+* `-ResetOnboarding` clears the onboarding flag and shows it (also in demo mode); `-OnboardingPage <0-3>` opens a page; `-DemoNotificationsUnasked` shows the "enable notifications" step even when the simulator already allowed them.
+* `-DemoHoldSplash` keeps the splash on screen. `-DemoLoginEmail <email>` prefills the login email (normal launch, no `-DemoMode`).
 
-`scripts/screenshots.sh` captures every screen in light and dark mode into `screenshots/`. It needs a
-booted simulator with the app installed, and notifications allowed once.
+The demo data also has a duplicate client (Maria Papadopoulou, same phone as Μαρία Παπαδοπούλου), extra fees and a discount on today's first pickup, three maintenance blocks on the Chevrolet Spark (now, done, planned) and checklists with drawn sample photos. Demo photo uploads are written to the app's Caches folder.
+
+`scripts/screenshots.sh` captures the screens in light and dark mode into `screenshots/` as JPEG (660 px).
+It needs a booted simulator with the app installed, and notifications allowed once. `SCREENS` and `MODES`
+pick a subset, `SHOT_DELAY` the wait per screen.
 
 ## Notifications
 
@@ -69,10 +92,9 @@ background refresh for an app the user force-quit. For instant alerts at all tim
 
 ## Remote push (when the app is closed)
 
-Everything on the app side is ready behind a flag. When `ArtemisRemotePushEnabled` is on and permission
-is granted, the app registers with APNs and saves its device token to `public.device_tokens`. The ready
-edge function `supabase/functions/push-new-request` sends the push. Nothing has been applied to the
-database or deployed.
+`ArtemisRemotePushEnabled` is on. With permission granted, the app registers with APNs and saves its device
+token to `public.device_tokens`; the edge function `supabase/functions/push-new-request` sends the push. The
+table (migration `20261104010000`) and the function are live in production.
 
 ### What the owner needs to provide
 
@@ -82,14 +104,18 @@ database or deployed.
 
 ### Steps
 
-**1. App.** In `project.yml`, uncomment
-`CODE_SIGN_ENTITLEMENTS: ArtemisCRM/Resources/ArtemisCRM.entitlements` (it contains `aps-environment`).
-In `ArtemisCRM/Resources/Info.plist`, set `ArtemisRemotePushEnabled` to `true`. Then run
-`xcodegen generate` and build to a real device (the simulator cannot receive real pushes). Settings ›
-"Remote push" should say *Ενεργό*, and you can copy the token from there. Debug builds register as
-`development` (sandbox) and TestFlight/App Store builds as `production`.
+**1. App.** Done in this repo: `project.yml` sets
+`CODE_SIGN_ENTITLEMENTS: ArtemisCRM/Resources/ArtemisCRM.entitlements` (`aps-environment`; archive/TestFlight
+signing switches it to production) and `Info.plist` has `ArtemisRemotePushEnabled` = `true`. The App ID needs the
+Push Notifications capability, otherwise signing fails: set the flag back to `false` and comment the line out.
+On every launch and every return to the foreground, while signed in with notifications allowed, the app calls
+`registerForRemoteNotifications()`. Each token iOS hands back is upserted into `public.device_tokens` (even if it is
+unchanged), with `environment` `development` for Debug builds and `production` for Release (TestFlight/App Store).
+It counts as saved only after the upsert succeeds; a failure is retried on the next launch or foreground.
+Settings › Παρασκήνιο & push shows "Token στον server" (saved, when, or failed) and **Επανεγγραφή** to retry now.
+The simulator cannot receive real pushes.
 
-**2. Database: the `device_tokens` table.** Run this in the SQL editor:
+**2. Database: the `device_tokens` table.** Applied in production (migration `20261104010000`). For another project, run:
 
 ```sql
 create table if not exists public.device_tokens (
@@ -161,9 +187,11 @@ ios/
     Logic/BusinessLogic.swift status.ts, whatsapp.ts, ratePricing.ts, availability, formatting
     Services/                 Backend protocol, SupabaseBackend, AppStore, Router/Auth, NotificationManager
     Design/                   Theme (brand colours, cards, pills, tabs, skeleton), TripCard
-    Features/                 Login, Today, Bookings, Requests, Fleet, More (Clients, Money, Settings)
+    Design/Brand.swift        Logo views, splash, appearance setting
+    Features/                 Login, Onboarding, Today, Bookings (+ checklists), Requests, Fleet (+ model forms,
+                              maintenance), More (Clients + merge, Money, Settings)
     Demo/                     DEBUG-only DemoBackend + sample data
-    Resources/                Info.plist, entitlements, Assets (app icon, logo, colour sets)
+    Resources/                Info.plist, entitlements, LaunchScreen.storyboard, Assets (app icon, logos, colour sets)
   scripts/                    run-demo.sh, screenshots.sh, make_icon.swift
   screenshots/                Light/dark captures of every screen (demo data)
 ```
@@ -175,5 +203,6 @@ redacted skeleton loading.
 ## Notes and limits
 
 * Only `info@artemisrental.gr` can sign in. RLS enforces this, and the app also signs out any other account, like `useAuth.tsx`.
-* Not in the app yet (still on the web): vehicle check-in/out checklists, client merge, creating or editing vehicle models and plates, maintenance blocks, extra fees and discounts in the booking form (existing `extra_fees_json` is kept untouched), and deleting bookings.
+* Still only on the web: editing a client's profile fields and tags, duplicating a booking, the yearly price calendar, copying periods from another model and the bulk monthly prices, and editing a model's name, cc or legacy low/high rates.
+* Checklist photos cannot be deleted from the app (the web cannot either).
 * Fleet photos come from `vehicles.image_url`. Demo mode uses the photos on rentacarsifnos.com.

@@ -41,6 +41,10 @@
 		<string>tel</string>
 		<string>mailto</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Για φωτογραφίες της κατάστασης του οχήματος στην παράδοση και την παραλαβή.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Για να επιλέξετε φωτογραφίες της κατάστασης του οχήματος.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
@@ -59,12 +63,9 @@
 		<string>gr.artemisrental.crm.refresh</string>
 	</array>
 	<key>ArtemisRemotePushEnabled</key>
-	<false/>
-	<key>UILaunchScreen</key>
-	<dict>
-		<key>UIColorName</key>
-		<string>LaunchBackground</string>
-	</dict>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>

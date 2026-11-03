@@ -31,6 +31,7 @@ struct TodayView: View {
         .background(Color.screen)
         .navigationTitle("Σήμερα")
         .toolbar {
+            BrandToolbarItem()
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showNewBooking = true } label: { Image(systemName: "plus.circle.fill").font(.title3) }
                     .accessibilityLabel("Νέα κράτηση")

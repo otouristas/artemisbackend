@@ -108,6 +108,58 @@ final class SupabaseBackend: Backend {
         try await client.from("clients").insert(input).select().single().execute().value
     }
 
+    func deleteBooking(id: String) async throws {
+        try await client.from("bookings").delete().eq("id", value: id).execute()
+    }
+
+    func mergeClients(keepID: String, mergeID: String) async throws {
+        try await client.from("bookings").update(ClientIDUpdate(clientID: keepID)).eq("client_id", value: mergeID).execute()
+        try await client.from("clients").delete().eq("id", value: mergeID).execute()
+    }
+
+    func fetchChecklists(bookingID: String) async throws -> [VehicleChecklist] {
+        try await client.from("vehicle_checklists").select().eq("booking_id", value: bookingID).order("created_at").execute().value
+    }
+
+    func createChecklist(_ input: ChecklistInput) async throws -> VehicleChecklist {
+        try await client.from("vehicle_checklists").insert(input).select().single().execute().value
+    }
+
+    func uploadVehiclePhoto(_ jpeg: Data) async throws -> String {
+        // Same naming as the web: `${Date.now()}_${random}.${ext}` at the bucket root.
+        let rand = String(UUID().uuidString.lowercased().filter(\.isLetter).prefix(8))
+        let name = "\(Int(Date().timeIntervalSince1970 * 1000))_\(rand).jpg"
+        let bucket = client.storage.from("vehicle-photos")
+        try await bucket.upload(name, data: jpeg, options: FileOptions(contentType: "image/jpeg"))
+        return try bucket.getPublicURL(path: name).absoluteString
+    }
+
+    func createVehicle(_ input: VehicleInput) async throws -> Vehicle {
+        do {
+            return try await client.from("vehicles").insert(input).select().single().execute().value
+        } catch { throw Self.vehicleError(error) }
+    }
+
+    func updateVehicle(id: String, _ update: VehicleUpdate) async throws -> Vehicle {
+        do {
+            return try await client.from("vehicles").update(update).eq("id", value: id).select().single().execute().value
+        } catch { throw Self.vehicleError(error) }
+    }
+
+    /// 23505 = unique_violation on vehicles_slug_key.
+    private static func vehicleError(_ error: Error) -> Error {
+        if "\(error)".contains("23505") || "\(error)".contains("vehicles_slug_key") { return BackendError.slugTaken }
+        return error
+    }
+
+    func createBlock(_ input: BlockInput) async throws -> VehicleBlock {
+        try await client.from("vehicle_blocks").insert(input).select().single().execute().value
+    }
+
+    func deleteBlock(id: String) async throws {
+        try await client.from("vehicle_blocks").delete().eq("id", value: id).execute()
+    }
+
     func createRate(_ input: RateInput) async throws -> VehicleRate {
         do {
             return try await client.from("vehicle_rates").insert(input).select().single().execute().value
@@ -178,14 +230,16 @@ final class SupabaseBackend: Backend {
 
     // MARK: Remote push
 
-    /// Upserts into public.device_tokens (see README). Silently ignored until the table exists.
-    func saveDeviceToken(_ token: String) async {
+    /// Upserts into public.device_tokens (migration 20261104010000). Debug builds register as
+    /// `development` (APNs sandbox), TestFlight/App Store (Release) builds as `production`.
+    func saveDeviceToken(_ token: String) async throws {
         struct Row: Encodable {
             let token: String
             let platform = "ios"
             let bundle_id = "gr.artemisrental.crm"
             let environment: String
             let device_name: String
+            let updated_at: String
         }
         #if DEBUG
         let env = "development"
@@ -193,8 +247,8 @@ final class SupabaseBackend: Backend {
         let env = "production"
         #endif
         let name = await MainActor.run { UIDevice.current.name }
-        _ = try? await client.from("device_tokens")
-            .upsert(Row(token: token, environment: env, device_name: name), onConflict: "token")
+        try await client.from("device_tokens")
+            .upsert(Row(token: token, environment: env, device_name: name, updated_at: ISO.string(Date())), onConflict: "token")
             .execute()
     }
 }

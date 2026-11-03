@@ -4,6 +4,10 @@ struct VehicleDetailView: View {
     @EnvironmentObject private var store: AppStore
     let vehicleID: String
     @State private var editingRate: RateSheet?
+    @State private var editingVehicle = false
+    @State private var addingBlock = false
+    @State private var addingUnits = false
+    @State private var deletingBlock: VehicleBlock?
 
     struct RateSheet: Identifiable { let id = UUID(); let rate: VehicleRate? }
 
@@ -17,7 +21,7 @@ struct VehicleDetailView: View {
         let today = Day.today
         let upcoming = store.bookings.filter { $0.vehicleID == v.id && $0.isActive && $0.checkOut >= today }.sorted { $0.checkIn < $1.checkIn }
         let rates = store.rates(for: v.id).filter { $0.endDate >= today }
-        return List {
+        return ScrollViewReader { proxy in List {
             Section {
                 hero(v)
                     .listRowInsets(EdgeInsets())
@@ -32,34 +36,56 @@ struct VehicleDetailView: View {
                 AvailabilityStrip(vehicle: v)
                     .padding(.vertical, 6)
             }
-            Section("Μονάδες σήμερα") {
-                let busy = Availability.conflicts(vehicle: v, from: today, to: today, bookings: store.bookings)
+            Section {
                 if v.unitPlates.isEmpty {
-                    Text("Δεν έχουν καταχωρηθεί πινακίδες").foregroundStyle(.secondary)
+                    Text("Δεν έχουν καταχωρηθεί πινακίδες").font(.subheadline).foregroundStyle(.secondary)
                 }
-                ForEach(v.unitPlates, id: \.self) { plate in
-                    let b = busy.first { $0.plate == plate }
+                ForEach(Array(store.unitStatuses(v).enumerated()), id: \.offset) { i, unit in
                     HStack {
-                        PlateBadge(plate: plate)
+                        if let plate = unit.plate { PlateBadge(plate: plate) } else { Text("Μονάδα \(i + 1)").font(.subheadline).foregroundStyle(.secondary) }
                         Spacer()
-                        if let b {
-                            NavigationLink(value: Route.booking(b.id)) {
-                                HStack {
-                                    Spacer()
-                                    Text(b.customerName).font(.subheadline).lineLimit(1)
-                                    StatusPill(text: "έως \(Day.dayMonth(b.checkOut))", color: .navy)
+                        switch unit.status {
+                        case .available:
+                            StatusPill(text: "Ελεύθερο", color: .success, icon: "checkmark")
+                        case .blocked(let block):
+                            StatusPill(text: "Συντήρηση · \(block.reason?.nilIfBlank ?? "έως \(Day.dayMonth(block.endDate))")", color: .danger, icon: "wrench.and.screwdriver")
+                        case .onRent(let b):
+                            if let b {
+                                NavigationLink(value: Route.booking(b.id)) {
+                                    HStack {
+                                        Spacer()
+                                        Text(b.customerName).font(.subheadline).lineLimit(1)
+                                        StatusPill(text: "έως \(Day.dayMonth(b.checkOut))", color: .navy)
+                                    }
                                 }
                             }
-                        } else {
-                            StatusPill(text: "Ελεύθερο", color: .success, icon: "checkmark")
                         }
                     }
                 }
-                ForEach(store.blocks.filter { $0.vehicleID == v.id && $0.endDate >= today }) { block in
-                    Label("\(block.reason ?? "Μπλοκάρισμα") · \(Day.shortRange(block.startDate, block.endDate))", systemImage: "wrench.and.screwdriver")
-                        .font(.subheadline).foregroundStyle(Color.warning)
+                Button { addingUnits = true } label: { Label("Προσθήκη μονάδων", systemImage: "plus.square.on.square") }
+            } header: { Text("Μονάδες σήμερα") }
+            .id("units")
+            Section {
+                let modelBlocks = store.blocks(for: v)
+                if modelBlocks.isEmpty {
+                    Label("Κανένα μπλοκ συντήρησης.", systemImage: "wrench.and.screwdriver").font(.subheadline).foregroundStyle(.secondary)
                 }
+                ForEach(modelBlocks) { block in
+                    HStack {
+                        BlockRow(block: block)
+                        Button { deletingBlock = block } label: { Image(systemName: "trash").foregroundStyle(Color.danger) }
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("Διαγραφή μπλοκ")
+                    }
+                    .swipeActions {
+                        Button(role: .destructive) { deletingBlock = block } label: { Label("Διαγραφή", systemImage: "trash") }
+                    }
+                }
+                Button { addingBlock = true } label: { Label("Νέο μπλοκ συντήρησης", systemImage: "plus.circle.fill") }
+            } header: { Text("Συντήρηση (\(store.blocks(for: v).count))") } footer: {
+                Text("Κάθε μπλοκ δεσμεύει μία μονάδα για τις ημερομηνίες, μέχρι και την τελευταία, όπως μια κράτηση. Μετράει στη διαθεσιμότητα του CRM και του site.")
             }
+            .id("maintenance")
             Section {
                 if upcoming.isEmpty {
                     Text("Καμία επερχόμενη κράτηση").foregroundStyle(.secondary)
@@ -96,10 +122,46 @@ struct VehicleDetailView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .task {
+            #if DEBUG
+            guard let r = AppConfig.demoRoute else { return }
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            switch r {
+            case "fleet/maintenance": withAnimation { proxy.scrollTo("units", anchor: .top) }
+            case "fleet/block": addingBlock = true
+            case "fleet/edit": editingVehicle = true
+            case "fleet/block-delete":
+                withAnimation { proxy.scrollTo("maintenance", anchor: .top) }
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                deletingBlock = store.blocks(for: v).first
+            default: break
+            }
+            #endif
+        }
+        }
         .background(Color.screen)
         .navigationTitle(v.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button { editingVehicle = true } label: { Label("Επεξεργασία μοντέλου", systemImage: "pencil") }
+                    Button { addingUnits = true } label: { Label("Προσθήκη μονάδων", systemImage: "plus.square.on.square") }
+                    Button { addingBlock = true } label: { Label("Μπλοκ συντήρησης", systemImage: "wrench.and.screwdriver") }
+                    Button { editingRate = RateSheet(rate: nil) } label: { Label("Νέα περίοδος τιμής", systemImage: "eurosign.circle") }
+                } label: { Text("Επεξεργασία") }
+            }
+        }
         .sheet(item: $editingRate) { s in RateEditView(vehicle: v, rate: s.rate) }
+        .sheet(isPresented: $editingVehicle) { VehicleEditView(vehicle: v) }
+        .sheet(isPresented: $addingBlock) { BlockFormView(vehicle: v) }
+        .sheet(isPresented: $addingUnits) { VehicleFormView(mode: .existing, existingID: v.id) }
+        .alert("Διαγραφή μπλοκ συντήρησης;", isPresented: Binding(get: { deletingBlock != nil }, set: { if !$0 { deletingBlock = nil } }), presenting: deletingBlock) { block in
+            Button("Διαγραφή", role: .destructive) { Task { await store.deleteBlock(block) } }
+            Button("Άκυρο", role: .cancel) {}
+        } message: { _ in
+            Text("Το όχημα θα εμφανίζεται ξανά διαθέσιμο για αυτές τις ημερομηνίες.")
+        }
     }
 
     private func hero(_ v: Vehicle) -> some View {
@@ -108,13 +170,14 @@ struct VehicleDetailView: View {
                 .frame(height: 200)
             VStack(alignment: .leading, spacing: 4) {
                 Text(v.name).font(.title2.weight(.bold))
-                Text("\(Labels.vehicleType(v.type)) · \(v.cc) cc · \(v.units) μονάδες").font(.subheadline).foregroundStyle(.secondary)
+                Text("\(Labels.vehicleType(v.type)) · \(v.cc) cc · \(v.units) \(v.units == 1 ? "μονάδα" : "μονάδες")" + (v.slug.map { " · /\($0)" } ?? ""))
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
             HStack(spacing: 10) {
                 Circle().fill(v.active ? Color.success : Color.secondary).frame(width: 8, height: 8)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(v.active ? "ΕΝΕΡΓΟ" : "ΑΝΕΝΕΡΓΟ").font(.caption.weight(.heavy)).tracking(0.5)
-                    Text(v.active ? ((v.showOnSite ?? true) ? "Εμφανίζεται στο site και δέχεται κρατήσεις." : "Ενεργό στο CRM, κρυφό στο site.") : "Δεν εμφανίζεται για νέες κρατήσεις.")
+                    Text(v.active ? (v.slug?.nilIfBlank == nil ? "Ενεργό στο CRM · χωρίς slug, δεν εμφανίζεται στο site." : (v.showOnSite ?? true) ? "Εμφανίζεται στο site και δέχεται κρατήσεις." : "Ενεργό στο CRM, κρυφό στο site.") : "Δεν εμφανίζεται για νέες κρατήσεις.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()

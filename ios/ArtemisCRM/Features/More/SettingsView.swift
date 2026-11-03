@@ -11,6 +11,21 @@ struct SettingsView: View {
     var body: some View {
         List {
             Section {
+                VStack(spacing: 8) {
+                    BrandLogo(height: 56)
+                    Text("Back office · Απολλωνία, Σίφνος").font(.caption).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .listRowBackground(Color.clear)
+            }
+            Section {
+                AppearancePicker()
+                    .listRowInsets(EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12))
+            } header: { Text("Εμφάνιση") } footer: {
+                Text("Αυτόματο: ακολουθεί τη ρύθμιση του iPhone. Ισχύει αμέσως σε όλες τις οθόνες.")
+            }
+            Section {
                 HStack {
                     Label("Άδεια ειδοποιήσεων", systemImage: "bell.badge")
                     Spacer()
@@ -37,6 +52,15 @@ struct SettingsView: View {
                 InfoRow(icon: "arrow.clockwise", title: "Έλεγχος παρασκηνίου", value: backgroundStatus)
                 InfoRow(icon: "clock", title: "Τελευταίος έλεγχος", value: notifications.lastBackgroundRun.map { $0.formatted(.relative(presentation: .named).locale(greek)) } ?? "—")
                 InfoRow(icon: "antenna.radiowaves.left.and.right", title: "Remote push", value: AppConfig.remotePushEnabled ? (notifications.deviceToken == nil ? "Αναμονή token" : "Ενεργό") : "Ανενεργό")
+                if AppConfig.remotePushEnabled {
+                    InfoRow(icon: "server.rack", title: "Token στον server", value: tokenServerText, valueColor: tokenServerColor)
+                    Button {
+                        Task { await notifications.reregister() }
+                    } label: {
+                        Label("Επανεγγραφή", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(notifications.tokenStatus == .saving)
+                }
                 if let token = notifications.deviceToken {
                     Button { UIPasteboard.general.string = token; store.show("Το token αντιγράφηκε") } label: {
                         Label("Αντιγραφή device token", systemImage: "doc.on.doc")
@@ -96,6 +120,23 @@ struct SettingsView: View {
         case .authorized, .provisional, .ephemeral: return .success
         case .denied: return .danger
         default: return .warning
+        }
+    }
+
+    private var tokenServerText: String {
+        switch notifications.tokenStatus {
+        case .saved(let at): return "Αποθηκεύτηκε · " + at.formatted(.relative(presentation: .named).locale(greek))
+        case .saving: return "Αποθήκευση…"
+        case .failed: return "Απέτυχε · νέα προσπάθεια στο επόμενο άνοιγμα"
+        case .none: return notifications.authorization == .authorized ? "Όχι ακόμη" : "Χρειάζεται άδεια ειδοποιήσεων"
+        }
+    }
+
+    private var tokenServerColor: Color {
+        switch notifications.tokenStatus {
+        case .saved: return .success
+        case .failed: return .danger
+        default: return .secondary
         }
     }
 

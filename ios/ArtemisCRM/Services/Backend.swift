@@ -21,6 +21,24 @@ enum AppConfig {
         #endif
     }
 
+    /// DEBUG: `-ResetOnboarding` clears the "seen" flag and shows the onboarding even in demo mode.
+    static var forceOnboarding: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("-ResetOnboarding")
+        #else
+        return false
+        #endif
+    }
+
+    /// DEBUG: `-OnboardingPage 2` opens the onboarding on that page (0-based), for screenshots.
+    static var onboardingStartPage: Int {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-OnboardingPage"), i + 1 < args.count { return Int(args[i + 1]) ?? 0 }
+        #endif
+        return 0
+    }
+
     /// DEBUG helper for screenshots: `-DemoRoute requests/detail` etc.
     static var demoRoute: String? {
         #if DEBUG
@@ -36,8 +54,33 @@ enum AppConfig {
         return "\(v) (\(b))"
     }
 
+    static func normalizedEmail(_ email: String?) -> String { (email ?? "").trimmed.lowercased() }
+
     static func isAllowedAdmin(_ email: String?) -> Bool {
-        (email ?? "").trimmed.lowercased() == allowedAdminEmail
+        normalizedEmail(email) == allowedAdminEmail
+    }
+
+    /// A typo of the admin address (e.g. "info@artemisrentals.gr"): up to 2 edits away.
+    static func isNearMissAdmin(_ email: String?) -> Bool {
+        let e = normalizedEmail(email)
+        guard e.count >= 8, e != allowedAdminEmail else { return false }
+        return editDistance(e, allowedAdminEmail) <= 2
+    }
+
+    /// Levenshtein distance.
+    private static func editDistance(_ a: String, _ b: String) -> Int {
+        let a = Array(a), b = Array(b)
+        guard !a.isEmpty else { return b.count }
+        guard !b.isEmpty else { return a.count }
+        var prev = Array(0...b.count)
+        for i in 1...a.count {
+            var cur = [i] + Array(repeating: 0, count: b.count)
+            for j in 1...b.count {
+                cur[j] = Swift.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1))
+            }
+            prev = cur
+        }
+        return prev[b.count]
     }
 }
 
@@ -47,6 +90,8 @@ enum ChangeEvent {
 }
 
 enum BackendError: LocalizedError {
+    static let slugTaken = BackendError.message("Το slug χρησιμοποιείται ήδη από άλλο όχημα")
+
     case unauthorized
     case message(String)
     var errorDescription: String? {
@@ -77,6 +122,20 @@ protocol Backend: AnyObject {
     func updateRequest(id: String, _ update: RequestStatusUpdate) async throws
     func createClient(_ input: ClientInput) async throws -> Client
 
+    func deleteBooking(id: String) async throws
+    /// useMergeClients(): move the duplicate's bookings to `keepID`, then delete the duplicate.
+    func mergeClients(keepID: String, mergeID: String) async throws
+
+    func fetchChecklists(bookingID: String) async throws -> [VehicleChecklist]
+    func createChecklist(_ input: ChecklistInput) async throws -> VehicleChecklist
+    /// uploadVehiclePhoto(): stores a JPEG in the public `vehicle-photos` bucket, returns its public URL.
+    func uploadVehiclePhoto(_ jpeg: Data) async throws -> String
+
+    func createVehicle(_ input: VehicleInput) async throws -> Vehicle
+    func updateVehicle(id: String, _ update: VehicleUpdate) async throws -> Vehicle
+    func createBlock(_ input: BlockInput) async throws -> VehicleBlock
+    func deleteBlock(id: String) async throws
+
     func createRate(_ input: RateInput) async throws -> VehicleRate
     func updateRate(id: String, _ input: RateInput) async throws
     func deleteRate(id: String) async throws
@@ -85,5 +144,6 @@ protocol Backend: AnyObject {
     func changes() -> AsyncStream<ChangeEvent>
     func stopChanges() async
 
-    func saveDeviceToken(_ token: String) async
+    /// Upserts the APNs token into public.device_tokens. Throws when the server did not save it.
+    func saveDeviceToken(_ token: String) async throws
 }

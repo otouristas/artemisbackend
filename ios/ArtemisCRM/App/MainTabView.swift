@@ -82,12 +82,19 @@ struct MainTabView: View {
             let parts = route.split(separator: "/").map(String.init)
             switch parts.first {
             case "bookings": router.tab = .bookings
-                if parts.count > 1, let b = store.bookings.first(where: { $0.checkIn == today && $0.balance > 0 }) ?? store.bookings.first { router.bookingsPath = [.booking(b.id)] }
+                #if DEBUG
+                // checklist(/new): a rental with a recorded check-in; edit/delete: the booking with extra fees.
+                let pinned: String? = parts.count > 1 ? (parts[1] == "checklist" ? DemoData.checklistBookingID : ["edit", "delete"].contains(parts[1]) ? DemoData.feesBookingID : nil) : nil
+                #else
+                let pinned: String? = nil
+                #endif
+                if parts.count > 1, let b = store.booking(pinned) ?? store.bookings.first(where: { $0.checkIn == today && $0.balance > 0 }) ?? store.bookings.first { router.bookingsPath = [.booking(b.id)] }
             case "requests": router.tab = .requests
                 if parts.count > 1, let r = store.requests.first(where: { $0.status == .new }) { router.requestsPath = [.request(r.id)] }
             case "today": router.tab = .today
             case "fleet": router.tab = .fleet
-                if parts.count > 1, let v = store.vehicles.first { router.fleetPath = [.vehicle(v.id)] }
+                // fleet/detail, fleet/maintenance, fleet/block, fleet/edit open the first model; fleet/new and fleet/units the form.
+                if parts.count > 1, !["new", "units"].contains(parts[1]), let v = store.vehicles.first { router.fleetPath = [.vehicle(v.id)] }
             case "more": router.tab = .more
                 if parts.count > 1 {
                     switch parts[1] {
