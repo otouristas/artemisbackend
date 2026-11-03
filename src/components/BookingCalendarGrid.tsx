@@ -1,267 +1,591 @@
-import { useMemo, useState, useCallback } from "react";
-import { format, getDaysInMonth, isSameDay, isWithinInterval, parseISO, startOfDay, differenceInDays, addDays } from "date-fns";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
+import {
+  addDays,
+  differenceInCalendarDays,
+  eachDayOfInterval,
+  endOfMonth,
+  format,
+  isSameDay,
+  isWeekend,
+  parseISO,
+  startOfMonth,
+} from "date-fns";
 import { el } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { AlertTriangle, Bike, Car, ChevronDown, ChevronsDownUp, ChevronsUpDown, Wrench } from "lucide-react";
 import { toast } from "sonner";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Vehicle } from "@/hooks/useVehicles";
 import type { Booking } from "@/hooks/useBookings";
+import type { VehicleBlock } from "@/hooks/useVehicleBlocks";
+import {
+  STATUS_BAR,
+  STATUS_DOT,
+  STATUS_LABEL,
+  allocateUnits,
+  finance,
+  initials,
+  isoDay,
+  money,
+  rentalDays,
+  todayStart,
+  unitsTaken,
+  type UnitLane,
+} from "@/components/bookings/bookingUtils";
 
 interface BookingCalendarGridProps {
   currentMonth: Date;
   vehicles: Vehicle[];
   bookings: Booking[];
+  blocks?: VehicleBlock[];
   onBookingClick: (booking: Booking) => void;
   onCellClick: (vehicleId: string, date: Date) => void;
-  onBookingUpdate?: (data: { id: string; check_in: string; check_out: string }) => void;
+  onBookingUpdate?: (data: { id: string; check_in: string; check_out: string; plate?: string | null }) => void;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  confirmed: "bg-success text-success-foreground",
-  pending: "bg-warning text-warning-foreground",
-  cancelled: "bg-destructive text-destructive-foreground",
-};
+const LEFT_COL = 236;
+const DAY_MIN = 40;
 
-const allocateLanesForVehicle = (vehicle: Vehicle, vehicleBookings: Booking[]) => {
-  const sorted = [...vehicleBookings].sort((a, b) => a.check_in.localeCompare(b.check_in));
-  const quantity = vehicle.quantity ?? 1;
-  const lanes: Booking[][] = Array.from({ length: quantity }, () => []);
+interface DragState {
+  booking: Booking;
+  /** Day (within the bar) the user grabbed, relative to check-in. */
+  grabOffset: number;
+}
 
-  for (const booking of sorted) {
-    let assigned = false;
-    for (let i = 0; i < lanes.length; i++) {
-      const hasOverlap = lanes[i].some(
-        (b) => !(booking.check_out < b.check_in || b.check_out < booking.check_in)
-      );
-      if (!hasOverlap) {
-        lanes[i].push(booking);
-        assigned = true;
-        break;
-      }
-    }
-    if (!assigned) {
-      lanes.push([booking]);
-    }
-  }
-  return lanes;
-};
+interface DropTarget {
+  rowKey: string;
+  vehicleId: string;
+  plate: string | null;
+  day: number;
+}
 
 export function BookingCalendarGrid({
   currentMonth,
   vehicles,
   bookings,
+  blocks = [],
   onBookingClick,
   onCellClick,
   onBookingUpdate,
 }: BookingCalendarGridProps) {
-  const isMobile = useIsMobile();
-  const daysInMonth = getDaysInMonth(currentMonth);
-  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-  const year = currentMonth.getFullYear();
-  const month = currentMonth.getMonth();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const [drop, setDrop] = useState<DropTarget | null>(null);
 
-  const [dragBooking, setDragBooking] = useState<{ booking: Booking; dayOffset: number } | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ vehicleId: string; day: number } | null>(null);
+  const monthKey = startOfMonth(currentMonth).getTime();
+  const monthStart = new Date(monthKey);
+  const monthEnd = endOfMonth(monthStart);
+  const days = useMemo(
+    () => eachDayOfInterval({ start: new Date(monthKey), end: endOfMonth(new Date(monthKey)) }),
+    [monthKey],
+  );
+  const dayCount = days.length;
+  const today = todayStart();
+  const todayIndex = days.findIndex((d) => isSameDay(d, today));
+  const startKey = isoDay(monthStart);
+  const endKey = isoDay(monthEnd);
 
+  const gridCols: CSSProperties = {
+    gridTemplateColumns: `var(--left-col) repeat(${dayCount}, minmax(${DAY_MIN}px, 1fr))`,
+  };
 
+  // Bookings visible in this month, grouped per model and split across units
+  const rows = useMemo(() => {
+    return vehicles.map((vehicle) => {
+      const vb = bookings.filter(
+        (b) => b.vehicle_id === vehicle.id && b.check_in <= endKey && b.check_out >= startKey,
+      );
+      const lanes = allocateUnits(vehicle, vb);
+      const vBlocks = blocks.filter(
+        (bl) => bl.vehicle_id === vehicle.id && bl.start_date <= endKey && bl.end_date >= startKey,
+      );
+      const qty = Math.max(1, vehicle.quantity ?? 1);
+      const free = days.map((d) => {
+        const key = isoDay(d);
+        if (vBlocks.some((bl) => bl.start_date <= key && key <= bl.end_date)) return -1;
+        return Math.max(0, qty - unitsTaken(vb, d));
+      });
+      return { vehicle, lanes, blocks: vBlocks, free, qty, count: vb.filter((b) => b.status !== "cancelled").length };
+    });
+  }, [vehicles, bookings, blocks, days, startKey, endKey]);
 
-  const isCheckIn = (booking: Booking, day: number) =>
-    isSameDay(parseISO(booking.check_in), new Date(year, month, day));
+  const totalUnits = rows.reduce((s, r) => s + r.qty, 0);
+  const allCollapsed = rows.length > 0 && rows.every((r) => collapsed.has(r.vehicle.id));
 
-  const isCheckOut = (booking: Booking, day: number) =>
-    isSameDay(parseISO(booking.check_out), new Date(year, month, day));
+  // Bring today into view on narrow screens
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || todayIndex < 0) return;
+    const dayWidth = (el.scrollWidth - LEFT_COL) / dayCount;
+    const target = LEFT_COL + dayWidth * todayIndex - el.clientWidth / 2;
+    if (target > 0) el.scrollLeft = target;
+  }, [todayIndex, dayCount, currentMonth]);
 
-  const today = startOfDay(new Date());
+  const toggle = (id: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
-  const handleDragStart = useCallback((e: React.DragEvent, booking: Booking, day: number) => {
-    const checkInDate = startOfDay(parseISO(booking.check_in));
-    const cellDate = startOfDay(new Date(year, month, day));
-    const dayOffset = differenceInDays(cellDate, checkInDate);
-    setDragBooking({ booking, dayOffset });
+  const toggleAll = () =>
+    setCollapsed(allCollapsed ? new Set() : new Set(rows.map((r) => r.vehicle.id)));
+
+  // ── Drag & drop rescheduling ────────────────────────────
+  const dayIndexOf = (iso: string) => differenceInCalendarDays(parseISO(iso), monthStart);
+
+  const handleDragStart = (e: DragEvent<HTMLButtonElement>, booking: Booking) => {
+    const track = (e.currentTarget.closest("[data-track]") as HTMLElement | null)?.getBoundingClientRect();
+    let grabbed = dayIndexOf(booking.check_in);
+    if (track) grabbed = Math.floor(((e.clientX - track.left) / track.width) * dayCount);
+    setDrag({ booking, grabOffset: grabbed - dayIndexOf(booking.check_in) });
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", booking.id);
-  }, [year, month]);
+  };
 
-  const handleDragOver = useCallback((e: React.DragEvent, vehicleId: string, day: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDropTarget({ vehicleId, day });
-  }, []);
+  const handleDrop = (target: DropTarget) => {
+    setDrop(null);
+    if (!drag || !onBookingUpdate) return;
+    const { booking, grabOffset } = drag;
+    setDrag(null);
+    if (target.vehicleId !== booking.vehicle_id) {
+      toast.error("Η μετακίνηση γίνεται μόνο μέσα στο ίδιο μοντέλο");
+      return;
+    }
+    const nights = differenceInCalendarDays(parseISO(booking.check_out), parseISO(booking.check_in));
+    const newIn = addDays(monthStart, target.day - grabOffset);
+    const newOut = addDays(newIn, nights);
+    const checkIn = isoDay(newIn);
+    const checkOut = isoDay(newOut);
+    const plate = target.plate ?? booking.plate;
+    if (checkIn === booking.check_in && (plate ?? null) === (booking.plate ?? null)) return;
+    onBookingUpdate({ id: booking.id, check_in: checkIn, check_out: checkOut, plate });
+  };
 
-  const handleDragLeave = useCallback(() => {
-    setDropTarget(null);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent, vehicleId: string, day: number) => {
-    e.preventDefault();
-    setDropTarget(null);
-    if (!dragBooking || !onBookingUpdate) return;
-
-    const { booking, dayOffset } = dragBooking;
-    const duration = differenceInDays(parseISO(booking.check_out), parseISO(booking.check_in));
-    const newCheckIn = addDays(new Date(year, month, day), -dayOffset);
-    const newCheckOut = addDays(newCheckIn, duration);
-
-    onBookingUpdate({
-      id: booking.id,
-      check_in: format(newCheckIn, "yyyy-MM-dd"),
-      check_out: format(newCheckOut, "yyyy-MM-dd"),
-    });
-    toast.success("Η κράτηση μετακινήθηκε!");
-    setDragBooking(null);
-  }, [dragBooking, onBookingUpdate, year, month]);
-
-  const handleDragEnd = useCallback(() => {
-    setDragBooking(null);
-    setDropTarget(null);
-  }, []);
-
-  // Responsive sizing
-  const vehicleColWidth = isMobile ? 100 : 140;
-  const dayColWidth = isMobile ? 32 : 38;
-  const cellHeight = isMobile ? 32 : 36;
-  const totalWidth = vehicleColWidth + (daysInMonth * dayColWidth);
+  const ghostFor = (rowKey: string) => {
+    if (!drag || !drop || drop.rowKey !== rowKey) return null;
+    const nights = differenceInCalendarDays(parseISO(drag.booking.check_out), parseISO(drag.booking.check_in));
+    const ci = drop.day - drag.grabOffset;
+    return barGeometry(ci, ci + nights, dayCount);
+  };
 
   return (
-    <div className="overflow-x-auto border rounded-lg bg-card -mx-3 sm:mx-0 scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <table className="border-collapse" style={{ width: `${totalWidth}px`, minWidth: `${totalWidth}px`, tableLayout: 'fixed' }}>
-        <colgroup>
-          <col style={{ width: `${vehicleColWidth}px` }} />
-          {days.map((day) => (
-            <col key={day} style={{ width: `${dayColWidth}px` }} />
-          ))}
-        </colgroup>
-        <thead className="sticky top-0 z-10">
-          <tr className="bg-muted/50">
-            <th className="px-1.5 sm:px-2 py-1.5 sm:py-2 font-semibold text-[10px] sm:text-xs border-r border-b text-left sticky left-0 bg-muted/50 z-20">
-              Όχημα
-            </th>
-            {days.map((day) => {
-              const date = new Date(year, month, day);
-              const isToday = isSameDay(date, today);
-              const dayName = format(date, "EEE", { locale: el });
-              const isSunday = date.getDay() === 0;
+    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+      <div
+        ref={scrollRef}
+        className="relative max-h-[calc(100dvh-330px)] min-h-[420px] overflow-auto overscroll-contain [--left-col:176px] lg:[--left-col:236px]"
+      >
+        <div style={{ minWidth: `calc(var(--left-col) + ${dayCount * DAY_MIN}px)` }}>
+          {/* ── Sticky date header ── */}
+          <div className="sticky top-0 z-30 grid border-b bg-card" style={gridCols}>
+            <div className="sticky left-0 z-40 flex items-end justify-between gap-2 border-r bg-card px-3 pb-2 pt-3">
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Στόλος</div>
+                <div className="truncate text-xs text-muted-foreground/80">
+                  {rows.length} μοντέλα · {totalUnits} μονάδες
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={toggleAll}
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                title={allCollapsed ? "Ανάπτυξη όλων" : "Σύμπτυξη όλων"}
+                aria-label={allCollapsed ? "Ανάπτυξη όλων" : "Σύμπτυξη όλων"}
+              >
+                {allCollapsed ? <ChevronsUpDown className="h-4 w-4" /> : <ChevronsDownUp className="h-4 w-4" />}
+              </button>
+            </div>
+            {days.map((d, i) => {
+              const isToday = i === todayIndex;
+              const weekend = isWeekend(d);
               return (
-                <th
-                  key={day}
+                <div
+                  key={i}
                   className={cn(
-                    "text-center py-1 border-r border-b font-normal",
-                    isMobile ? "text-[9px]" : "text-xs",
-                    isToday && "bg-primary/10 font-bold",
-                    isSunday && "bg-destructive/5"
+                    "flex flex-col items-center justify-end gap-1 border-r border-border/60 pb-2 pt-2.5 last:border-r-0",
+                    weekend && "bg-muted/60",
                   )}
                 >
-                  <div className="font-medium">{day}</div>
-                  <div className={cn("text-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")}>{dayName}</div>
-                </th>
+                  <span
+                    className={cn(
+                      "text-[10px] font-semibold uppercase tracking-wide",
+                      isToday ? "text-primary" : weekend ? "text-foreground/70" : "text-muted-foreground",
+                    )}
+                  >
+                    {format(d, "EEEEEE", { locale: el })}
+                  </span>
+                  <span
+                    className={cn(
+                      "flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums",
+                      isToday ? "bg-primary text-primary-foreground shadow-sm" : "text-foreground",
+                    )}
+                  >
+                    {format(d, "d")}
+                  </span>
+                </div>
               );
             })}
-          </tr>
-        </thead>
-        <tbody>
-          {vehicles.flatMap((vehicle) => {
-            const vehicleBookings = bookings.filter((b) => b.vehicle_id === vehicle.id);
-            const lanes = allocateLanesForVehicle(vehicle, vehicleBookings);
+          </div>
 
-            return lanes.map((laneBookings, laneIndex) => {
-              const rowId = `${vehicle.id}-lane-${laneIndex}`;
-              let displayName = vehicle.name;
-              if ((vehicle.quantity ?? 1) > 1 || lanes.length > (vehicle.quantity ?? 1)) {
-                if (laneIndex < (vehicle.quantity ?? 1)) {
-                  displayName = `${vehicle.name} #${laneIndex + 1}`;
-                } else {
-                  displayName = `${vehicle.name} (Overbooked)`;
-                }
-              }
+          {rows.length === 0 && (
+            <div className="px-6 py-16 text-center text-sm text-muted-foreground">
+              Κανένα όχημα δεν ταιριάζει στα φίλτρα.
+            </div>
+          )}
 
-              return (
-                <tr key={rowId} className="border-b last:border-b-0 hover:bg-muted/20">
-                  <td className="px-1.5 sm:px-2 py-1 sm:py-1.5 border-r sticky left-0 bg-card z-10">
-                    <div className={cn("font-medium leading-tight truncate", isMobile ? "text-[10px]" : "text-[11px]")}>
-                      {displayName}
-                    </div>
-                    <div className={cn("text-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")}>
-                      {vehicle.cc}cc · {vehicle.daily_rate_low}-{vehicle.daily_rate_high}€{vehicle.plate ? ` · ${vehicle.plate}` : ""}
-                    </div>
-                  </td>
-                  {days.map((day) => {
-                    const date = new Date(year, month, day);
-                    const booking = laneBookings.find((b) => {
-                      const checkIn = startOfDay(parseISO(b.check_in));
-                      const checkOut = startOfDay(parseISO(b.check_out));
-                      return isWithinInterval(startOfDay(date), { start: checkIn, end: checkOut });
-                    });
-                    const isToday = isSameDay(date, today);
-                    const isSunday = date.getDay() === 0;
-                    const isDropHere = dropTarget?.vehicleId === vehicle.id && dropTarget?.day === day;
-
-                    if (booking) {
-                      const isStart = isCheckIn(booking, day);
-                      const isEnd = isCheckOut(booking, day);
-                      return (
-                        <td
-                          key={day}
-                          className={cn(
-                            "border-r cursor-pointer relative",
-                            isToday && "ring-1 ring-inset ring-primary/30",
-                            isSunday && "bg-destructive/5",
-                            isDropHere && "bg-primary/20"
-                          )}
-                          style={{ height: `${cellHeight}px` }}
-                          onClick={() => onBookingClick(booking)}
-                          onDragOver={(e) => handleDragOver(e, vehicle.id, day)}
-                          onDragLeave={handleDragLeave}
-                          onDrop={(e) => handleDrop(e, vehicle.id, day)}
-                          title={`${booking.customer_name} (${booking.status})`}
-                        >
-                          <div
-                            draggable={!isMobile}
-                            onDragStart={(e) => handleDragStart(e, booking, day)}
-                            onDragEnd={handleDragEnd}
-                            className={cn(
-                              "absolute inset-y-0.5 sm:inset-y-1 inset-x-0",
-                              STATUS_COLORS[booking.status],
-                              "opacity-80 hover:opacity-100 transition-opacity",
-                              !isMobile && "cursor-grab active:cursor-grabbing",
-                              isStart && "rounded-l-md ml-0.5",
-                              isEnd && "rounded-r-md mr-0.5"
-                            )}
-                          />
-                          {isStart && (
-                            <span className={cn(
-                              "relative z-10 font-semibold truncate px-0.5 flex items-center justify-center h-full pointer-events-none",
-                              isMobile ? "text-[7px]" : "text-[9px]"
-                            )}>
-                              {booking.customer_name.split(" ")[0]}
-                            </span>
-                          )}
-                        </td>
-                      );
-                    }
-
-                    return (
-                      <td
-                        key={day}
+          {rows.map(({ vehicle, lanes, blocks: vBlocks, free, qty, count }) => {
+            const isCollapsed = collapsed.has(vehicle.id);
+            const Icon = vehicle.type === "scooter" ? Bike : Car;
+            const freeToday = todayIndex >= 0 ? free[todayIndex] : null;
+            return (
+              <div key={vehicle.id} className="border-b last:border-b-0">
+                {/* ── Model header with free units per day ── */}
+                <div className="grid bg-muted/40" style={gridCols}>
+                  <button
+                    type="button"
+                    onClick={() => toggle(vehicle.id)}
+                    className="sticky left-0 z-20 flex h-11 items-center gap-2 border-r bg-muted px-2.5 text-left hover:bg-secondary"
+                  >
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                        isCollapsed && "-rotate-90",
+                      )}
+                    />
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-card text-muted-foreground ring-1 ring-border">
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold leading-tight text-foreground">
+                        {vehicle.name}
+                      </span>
+                      <span className="block truncate text-[11px] leading-tight text-muted-foreground">
+                        {qty} {qty === 1 ? "μονάδα" : "μονάδες"} · {count} κρατ.
+                      </span>
+                    </span>
+                    {freeToday !== null && (
+                      <span
                         className={cn(
-                          "border-r cursor-pointer hover:bg-primary/5 transition-colors",
-                          isToday && "bg-primary/5",
-                          isSunday && "bg-destructive/[0.03]",
-                          isDropHere && "bg-primary/20"
+                          "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
+                          freeToday <= 0
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-success/10 text-success",
                         )}
-                        style={{ height: `${cellHeight}px` }}
-                        onClick={() => onCellClick(vehicle.id, date)}
-                        onDragOver={(e) => handleDragOver(e, vehicle.id, day)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, vehicle.id, day)}
-                      />
+                        title="Ελεύθερα σήμερα"
+                      >
+                        {Math.max(0, freeToday)}/{qty}
+                      </span>
+                    )}
+                  </button>
+                  {free.map((f, i) => (
+                    <div
+                      key={i}
+                      title={f < 0 ? "Εκτός λειτουργίας" : `${f} από ${qty} ελεύθερα`}
+                      className={cn(
+                        "flex h-11 items-center justify-center border-r border-border/60 text-[11px] tabular-nums last:border-r-0",
+                        isWeekend(days[i]) && "bg-muted/60",
+                        i === todayIndex && "bg-primary/[0.07]",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "min-w-[22px] rounded px-1 py-0.5 text-center",
+                          f < 0
+                            ? "text-muted-foreground"
+                            : f === 0
+                              ? "bg-destructive/15 font-semibold text-destructive"
+                              : f / qty <= 0.25
+                                ? "bg-warning/15 font-semibold text-warning"
+                                : "text-muted-foreground",
+                        )}
+                      >
+                        {f < 0 ? "—" : f}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Unit rows ── */}
+                {!isCollapsed &&
+                  lanes.map((lane, laneIdx) => {
+                    const rowKey = `${vehicle.id}:${laneIdx}`;
+                    const ghost = ghostFor(rowKey);
+                    return (
+                      <div key={rowKey} className="group/row grid border-t border-border/60" style={gridCols}>
+                        <UnitLabel lane={lane} />
+                        {days.map((d, i) => (
+                          <div
+                            key={i}
+                            role="button"
+                            tabIndex={-1}
+                            aria-label={`Νέα κράτηση ${vehicle.name} ${format(d, "d MMM", { locale: el })}`}
+                            onClick={() => onCellClick(vehicle.id, d)}
+                            onDragOver={(e) => {
+                              if (!drag) return;
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = "move";
+                              if (drop?.rowKey !== rowKey || drop.day !== i)
+                                setDrop({ rowKey, vehicleId: vehicle.id, plate: lane.plate, day: i });
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              handleDrop({ rowKey, vehicleId: vehicle.id, plate: lane.plate, day: i });
+                            }}
+                            className={cn(
+                              "h-10 cursor-pointer border-r border-border/60 transition-colors last:border-r-0 hover:bg-primary/[0.06]",
+                              isWeekend(d) && "bg-muted/50",
+                              i === todayIndex && "bg-primary/[0.07]",
+                              lane.overflow && "bg-destructive/[0.04]",
+                            )}
+                            style={{ gridColumn: i + 2, gridRow: 1 }}
+                          />
+                        ))}
+
+                        {/* Bars layer */}
+                        <div
+                          data-track
+                          className="pointer-events-none relative"
+                          style={{ gridColumn: `2 / ${dayCount + 2}`, gridRow: 1 }}
+                        >
+                          {todayIndex >= 0 && (
+                            <div
+                              className="absolute inset-y-0 w-px bg-primary/40"
+                              style={{ left: `${((todayIndex + 0.5) / dayCount) * 100}%` }}
+                            />
+                          )}
+                          {vBlocks.map((bl) => {
+                            const g = blockGeometry(dayIndexOf(bl.start_date), dayIndexOf(bl.end_date), dayCount);
+                            if (!g) return null;
+                            return (
+                              <div
+                                key={bl.id}
+                                className="absolute inset-y-1 flex items-center gap-1 overflow-hidden rounded-md border border-dashed border-muted-foreground/40 px-2 text-[11px] font-medium text-muted-foreground [background-image:repeating-linear-gradient(135deg,hsl(var(--muted-foreground)/0.14)_0_6px,transparent_6px_12px)]"
+                                style={{ left: `calc(${g.left}% + 2px)`, width: `calc(${g.width}% - 4px)` }}
+                                title={bl.reason ?? "Εκτός λειτουργίας"}
+                              >
+                                {laneIdx === 0 && (
+                                  <>
+                                    <Wrench className="h-3 w-3 shrink-0" />
+                                    <span className="truncate">{bl.reason || "Εκτός λειτουργίας"}</span>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {lane.bookings.map((b) => {
+                            const g = barGeometry(dayIndexOf(b.check_in), dayIndexOf(b.check_out), dayCount);
+                            if (!g) return null;
+                            return (
+                              <BookingBar
+                                key={b.id}
+                                booking={b}
+                                vehicle={vehicle}
+                                geometry={g}
+                                dragging={drag?.booking.id === b.id}
+                                draggable={!!onBookingUpdate}
+                                onClick={() => onBookingClick(b)}
+                                onDragStart={(e) => handleDragStart(e, b)}
+                                onDragEnd={() => {
+                                  setDrag(null);
+                                  setDrop(null);
+                                }}
+                              />
+                            );
+                          })}
+                          {ghost && (
+                            <div
+                              className="absolute inset-y-1.5 rounded-full border-2 border-dashed border-primary/60 bg-primary/10"
+                              style={{ left: `calc(${ghost.left}% + 2px)`, width: `calc(${ghost.width}% - 4px)` }}
+                            />
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
-                </tr>
-              );
-            });
+              </div>
+            );
           })}
-        </tbody>
-      </table>
+        </div>
+      </div>
+
+      {/* ── Legend ── */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t bg-card px-4 py-2.5 text-xs text-muted-foreground">
+        <LegendSwatch className="bg-success" label="Επιβεβαιωμένη" />
+        <LegendSwatch className="bg-warning" label="Εκκρεμεί" />
+        <LegendSwatch className="border border-dashed border-destructive/60 bg-card" label="Ακυρωμένη" />
+        <LegendSwatch
+          className="border border-dashed border-muted-foreground/40 [background-image:repeating-linear-gradient(135deg,hsl(var(--muted-foreground)/0.25)_0_3px,transparent_3px_6px)]"
+          label="Εκτός λειτουργίας"
+        />
+        <span className="inline-flex items-center gap-1.5">
+          <span className="rounded bg-destructive/15 px-1 text-[10px] font-semibold text-destructive">0</span>
+          ελεύθερες μονάδες ανά ημέρα
+        </span>
+        <span className="ml-auto hidden lg:inline">
+          Σύρετε μια κράτηση για αλλαγή ημερομηνιών ή μονάδας · κλικ σε κενό κελί για νέα κράτηση
+        </span>
+      </div>
     </div>
+  );
+}
+
+// ── Pieces ──────────────────────────────────────────────
+
+function UnitLabel({ lane }: { lane: UnitLane }) {
+  if (lane.overflow) {
+    return (
+      <div className="sticky left-0 z-20 flex h-10 items-center gap-2 border-r bg-card pl-9 pr-3 text-destructive" style={{ gridColumn: 1, gridRow: 1 }}>
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate text-xs font-semibold">Υπερκράτηση</span>
+      </div>
+    );
+  }
+  return (
+    <div
+      className="sticky left-0 z-20 flex h-10 items-center gap-2 border-r bg-card pl-9 pr-3 group-hover/row:bg-muted"
+      style={{ gridColumn: 1, gridRow: 1 }}
+    >
+      <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded bg-muted px-1 text-[10px] font-semibold tabular-nums text-muted-foreground">
+        {lane.index + 1}
+      </span>
+      {lane.plate ? (
+        <span className="truncate whitespace-nowrap font-mono text-[12px] font-medium tracking-wide text-foreground">
+          {lane.plate}
+        </span>
+      ) : (
+        <span className="truncate whitespace-nowrap text-xs text-muted-foreground">Χωρίς πινακίδα</span>
+      )}
+    </div>
+  );
+}
+
+interface Geometry {
+  left: number;
+  width: number;
+  clipLeft: boolean;
+  clipRight: boolean;
+}
+
+/** Bar from mid check-in day to mid check-out day (turnover days share a cell). */
+function barGeometry(ci: number, co: number, dayCount: number): Geometry | null {
+  let start = ci + 0.5;
+  let end = co + 0.5;
+  if (end - start < 0.6) {
+    start = ci + 0.15;
+    end = ci + 0.85;
+  }
+  if (end <= 0 || start >= dayCount) return null;
+  const clipLeft = start < 0;
+  const clipRight = end > dayCount;
+  const s = Math.max(0, start);
+  const e = Math.min(dayCount, end);
+  return { left: (s / dayCount) * 100, width: ((e - s) / dayCount) * 100, clipLeft, clipRight };
+}
+
+function blockGeometry(si: number, ei: number, dayCount: number) {
+  const s = Math.max(0, si);
+  const e = Math.min(dayCount, ei + 1);
+  if (e <= s) return null;
+  return { left: (s / dayCount) * 100, width: ((e - s) / dayCount) * 100 };
+}
+
+function BookingBar({
+  booking,
+  vehicle,
+  geometry,
+  dragging,
+  draggable,
+  onClick,
+  onDragStart,
+  onDragEnd,
+}: {
+  booking: Booking;
+  vehicle: Vehicle;
+  geometry: Geometry;
+  dragging: boolean;
+  draggable: boolean;
+  onClick: () => void;
+  onDragStart: (e: DragEvent<HTMLButtonElement>) => void;
+  onDragEnd: () => void;
+}) {
+  const nights = rentalDays(booking);
+  const f = finance(booking);
+  return (
+    <Tooltip delayDuration={250}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          draggable={draggable}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          className={cn(
+            "pointer-events-auto absolute inset-y-1.5 z-10 flex items-center gap-1.5 overflow-hidden rounded-full pl-1 pr-2.5 text-left text-[12px] font-semibold shadow-sm transition-[filter,opacity,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+            STATUS_BAR[booking.status],
+            geometry.clipLeft && "rounded-l-none pl-2",
+            geometry.clipRight && "rounded-r-none",
+            draggable && "cursor-grab active:cursor-grabbing",
+            dragging && "opacity-40",
+          )}
+          style={{ left: `calc(${geometry.left}% + 2px)`, width: `calc(${geometry.width}% - 4px)` }}
+        >
+          {!geometry.clipLeft && (
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-background/25 text-[9px] font-bold no-underline">
+              {initials(booking.customer_name)}
+            </span>
+          )}
+          <span className="min-w-0 truncate">
+            {booking.customer_name}
+            <span className="font-normal opacity-80"> · {nights} ημ.</span>
+          </span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="w-64 p-0">
+        <div className="space-y-2 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-sm font-semibold">{booking.customer_name}</span>
+            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
+              <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[booking.status])} />
+              {STATUS_LABEL[booking.status]}
+            </span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {vehicle.name}
+            {booking.plate ? ` · ${booking.plate}` : ""}
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-medium capitalize">
+              {format(parseISO(booking.check_in), "EEE d MMM", { locale: el })} →{" "}
+              {format(parseISO(booking.check_out), "EEE d MMM", { locale: el })}
+            </span>
+            <span className="text-muted-foreground">{nights} ημ.</span>
+          </div>
+          {f.total > 0 && (
+            <div className="flex items-center justify-between border-t pt-2 text-xs">
+              <span className="font-semibold">{money(f.total)}</span>
+              {f.remaining > 0 ? (
+                <span className="text-warning">Υπόλοιπο {money(f.remaining)}</span>
+              ) : (
+                <span className="text-success">Εξοφλημένη</span>
+              )}
+            </div>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function LegendSwatch({ className, label }: { className: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={cn("h-2.5 w-5 rounded-full", className)} />
+      {label}
+    </span>
   );
 }

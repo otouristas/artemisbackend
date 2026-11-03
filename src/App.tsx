@@ -42,10 +42,10 @@ const App = () => (
                 <Route path="/fleet/:id/prices" element={<VehicleRatesPage />} />
                 <Route path="/money" element={<MoneyPage />} />
                 <Route path="/insights" element={<InsightsPage />} />
+                <Route path="/fleet/new" element={<FleetFormPage />} />
+                <Route path="/booking/new" element={<BookingFormPage />} />
+                <Route path="/booking/:id" element={<BookingFormPage />} />
               </Route>
-              <Route path="/fleet/new" element={<FleetFormPage />} />
-              <Route path="/booking/new" element={<BookingFormPage />} />
-              <Route path="/booking/:id" element={<BookingFormPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
