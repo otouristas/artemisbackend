@@ -12,6 +12,7 @@ import RequestsPage from "./pages/RequestsPage.tsx";
 import ClientsPage from "./pages/ClientsPage.tsx";
 import ClientProfilePage from "./pages/ClientProfilePage.tsx";
 import FleetPage from "./pages/FleetPage.tsx";
+import VehicleRatesPage from "./pages/VehicleRatesPage.tsx";
 import FleetFormPage from "./pages/FleetFormPage.tsx";
 import MoneyPage from "./pages/MoneyPage.tsx";
 import InsightsPage from "./pages/InsightsPage.tsx";
@@ -38,6 +39,7 @@ const App = () => (
                 <Route path="/clients" element={<ClientsPage />} />
                 <Route path="/clients/:id" element={<ClientProfilePage />} />
                 <Route path="/fleet" element={<FleetPage />} />
+                <Route path="/fleet/:id/prices" element={<VehicleRatesPage />} />
                 <Route path="/money" element={<MoneyPage />} />
                 <Route path="/insights" element={<InsightsPage />} />
               </Route>

@@ -6,7 +6,7 @@ import {
   parseISO,
   startOfDay,
 } from "date-fns";
-import { Bike, Car, ChevronRight, Plus, Trash2, LayoutGrid } from "lucide-react";
+import { Bike, Car, ChevronRight, Euro, Plus, Trash2, LayoutGrid } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -240,6 +240,15 @@ export default function FleetPage() {
         </div>
         <Button className="w-full active:scale-[0.98] transition-transform" onClick={() => void saveVehicle()} disabled={updateVehicle.isPending}>
           Αποθήκευση
+        </Button>
+
+        <Button
+          variant="outline"
+          className="w-full gap-1.5"
+          onClick={() => navigate(`/fleet/${selected.id}/prices`)}
+        >
+          <Euro className="h-4 w-4" />
+          Τιμές ανά περίοδο
         </Button>
 
         <div className="pt-3 border-t">

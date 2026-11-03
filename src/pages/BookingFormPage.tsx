@@ -5,6 +5,8 @@ import { el } from "date-fns/locale";
 import { CalendarIcon, MessageCircle, Sparkles, Loader2, AlertTriangle, ArrowLeft, Plus, Trash2, Car, Bike, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculateSeasonalPrice } from "@/lib/seasonRates";
+import { calculateFromRates } from "@/lib/ratePricing";
+import { useVehicleRates } from "@/hooks/useVehicleRates";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -60,6 +62,7 @@ export default function BookingFormPage() {
   const navigate = useNavigate();
 
   const { data: vehicles = [], isLoading: loadingVehicles } = useVehicles();
+  const { data: vehicleRates = [] } = useVehicleRates();
   const { data: bookings = [], isLoading: loadingBookings } = useBookings();
   const { data: clients = [] } = useClients();
   const { data: bookingRequests = [], isLoading: loadingRequests } = useBookingRequests();
@@ -464,10 +467,14 @@ export default function BookingFormPage() {
   const daysCount = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
 
   // Auto-calculation of seasonal rates
+  // Rate periods from the Fleet price editor win; the old hard-coded table covers
+  // models that have no periods yet.
   const priceBreakdown = useMemo(() => {
     if (!selectedVehicle || !checkIn || !checkOut) return null;
+    const periods = vehicleRates.filter((r) => r.vehicle_id === selectedVehicle.id);
+    if (periods.length > 0) return calculateFromRates(periods, checkIn, checkOut);
     return calculateSeasonalPrice(selectedVehicle.name, checkIn, checkOut);
-  }, [selectedVehicle, checkIn, checkOut]);
+  }, [selectedVehicle, checkIn, checkOut, vehicleRates]);
 
   const baseTotal = priceBreakdown?.available ? priceBreakdown.baseTotal : 0;
   const returningDiscount = isReturningCustomer ? -Math.abs(Number(discountAmount) || 0) : 0;
