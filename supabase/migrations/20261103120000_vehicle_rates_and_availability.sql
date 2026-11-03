@@ -10,9 +10,22 @@ ALTER TABLE public.vehicles
   ADD COLUMN IF NOT EXISTS slug TEXT,
   ADD COLUMN IF NOT EXISTS show_on_site BOOLEAN NOT NULL DEFAULT true;
 
-UPDATE public.vehicles
-SET slug = trim(both '-' from regexp_replace(replace(lower(name), ' automatic', '-auto'), '[^a-z0-9]+', '-', 'g'))
-WHERE slug IS NULL;
+-- Only the oldest row per generated slug gets it, so duplicate names cannot break the unique index.
+WITH candidates AS (
+  SELECT id,
+         trim(both '-' from regexp_replace(replace(lower(name), ' automatic', '-auto'), '[^a-z0-9]+', '-', 'g')) AS new_slug,
+         row_number() OVER (
+           PARTITION BY trim(both '-' from regexp_replace(replace(lower(name), ' automatic', '-auto'), '[^a-z0-9]+', '-', 'g'))
+           ORDER BY created_at, id
+         ) AS rn
+  FROM public.vehicles
+  WHERE slug IS NULL
+)
+UPDATE public.vehicles v
+SET slug = c.new_slug
+FROM candidates c
+WHERE v.id = c.id AND c.rn = 1
+  AND NOT EXISTS (SELECT 1 FROM public.vehicles o WHERE o.slug = c.new_slug);
 
 CREATE UNIQUE INDEX IF NOT EXISTS vehicles_slug_key ON public.vehicles (slug) WHERE slug IS NOT NULL;
 
