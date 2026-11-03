@@ -10,60 +10,68 @@ interface FleetAvailabilityProps {
   bookings: Booking[];
 }
 
+/** Today's free units per model, as a scrollable strip of photo chips. */
 export function FleetAvailability({ vehicles, bookings }: FleetAvailabilityProps) {
-  const today = startOfDay(new Date());
-
   const groups = useMemo(() => {
-    // Group vehicles by base name (without #N)
-    const nameMap = new Map<string, { total: number; booked: number; type: string }>();
-
+    const today = startOfDay(new Date());
+    // One row per model; legacy "#N" rows of the same model are folded together.
+    const map = new Map<string, { name: string; type: string; image: string | null; total: number; booked: number }>();
     for (const v of vehicles) {
       const baseName = v.name.replace(/ #\d+$/, "");
-      if (!nameMap.has(baseName)) {
-        nameMap.set(baseName, { total: 0, booked: 0, type: v.type });
-      }
-      const group = nameMap.get(baseName)!;
-      group.total++;
-
-      const isBooked = bookings.some((b) => {
+      const g = map.get(baseName) ?? { name: baseName, type: v.type, image: v.image_url, total: 0, booked: 0 };
+      const units = v.quantity ?? 1;
+      const onRent = bookings.filter((b) => {
         if (b.vehicle_id !== v.id || b.status === "cancelled") return false;
-        const checkIn = startOfDay(parseISO(b.check_in));
-        const checkOut = startOfDay(parseISO(b.check_out));
-        return isWithinInterval(today, { start: checkIn, end: checkOut });
-      });
-      if (isBooked) group.booked++;
+        return isWithinInterval(today, {
+          start: startOfDay(parseISO(b.check_in)),
+          end: startOfDay(parseISO(b.check_out)),
+        });
+      }).length;
+      g.total += units;
+      g.booked += Math.min(units, onRent);
+      g.image = g.image ?? v.image_url;
+      map.set(baseName, g);
     }
-
-    return Array.from(nameMap.entries()).map(([name, data]) => ({
-      name,
-      ...data,
-      available: data.total - data.booked,
-    }));
+    return [...map.values()].map((g) => ({ ...g, available: g.total - g.booked }));
   }, [vehicles, bookings]);
 
+  if (groups.length === 0) return null;
+
   return (
-    <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none -mx-3 px-3 scroll-fade-x flex-nowrap">
+    <div className="-mx-3 mb-4 flex flex-nowrap gap-2 overflow-x-auto px-3 pb-1 scrollbar-none scroll-fade-x">
       {groups.map((g) => {
         const Icon = g.type === "car" ? Car : Bike;
-        const allBooked = g.available === 0;
+        const full = g.available === 0;
+        const pct = g.total ? (g.available / g.total) * 100 : 0;
         return (
           <div
             key={g.name}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium shrink-0 shadow-sm border",
-              allBooked
-                ? "bg-destructive/10 border-destructive/20 text-destructive dark:bg-destructive/15"
-                : "bg-[#f7f4ef]/80 dark:bg-card border-border text-foreground"
+              "flex shrink-0 items-center gap-2.5 rounded-xl border bg-card py-1.5 pl-1.5 pr-3 shadow-sm",
+              full && "border-destructive/25 bg-destructive/5",
             )}
           >
-            <Icon className="h-3.5 w-3.5 opacity-70" />
-            <span className="truncate max-w-[110px]">{g.name}</span>
-            <span className={cn(
-              "font-bold ml-0.5",
-              allBooked ? "text-destructive" : "text-success"
-            )}>
-              {g.available}/{g.total}
-            </span>
+            <div className="flex h-8 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+              {g.image ? (
+                <img src={g.image} alt="" className="h-full w-full object-cover" loading="lazy" />
+              ) : (
+                <Icon className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="max-w-[120px] truncate text-xs font-semibold leading-tight">{g.name}</p>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="h-1 w-10 overflow-hidden rounded-full bg-muted">
+                  <span
+                    className={cn("block h-full rounded-full", full ? "bg-destructive" : "bg-success")}
+                    style={{ width: `${full ? 100 : pct}%` }}
+                  />
+                </span>
+                <span className={cn("text-[11px] font-bold tabular-nums leading-none", full ? "text-destructive" : "text-success")}>
+                  {g.available}/{g.total}
+                </span>
+              </div>
+            </div>
           </div>
         );
       })}

@@ -322,6 +322,8 @@ export type Database = {
           plates: string[] | null
           type: Database["public"]["Enums"]["vehicle_type"]
           quantity: number
+          slug: string | null
+          show_on_site: boolean
         }
         Insert: {
           active?: boolean
@@ -337,6 +339,8 @@ export type Database = {
           plates?: string[] | null
           type: Database["public"]["Enums"]["vehicle_type"]
           quantity?: number
+          slug?: string | null
+          show_on_site?: boolean
         }
         Update: {
           active?: boolean
@@ -349,10 +353,57 @@ export type Database = {
           name?: string
           notes?: string | null
           plate?: string | null
+          plates?: string[] | null
           type?: Database["public"]["Enums"]["vehicle_type"]
           quantity?: number
+          slug?: string | null
+          show_on_site?: boolean
         }
         Relationships: []
+      }
+      vehicle_rates: {
+        Row: {
+          created_at: string
+          daily_rate: number
+          end_date: string
+          id: string
+          label: string | null
+          min_days: number
+          start_date: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_rate: number
+          end_date: string
+          id?: string
+          label?: string | null
+          min_days?: number
+          start_date: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_rate?: number
+          end_date?: string
+          id?: string
+          label?: string | null
+          min_days?: number
+          start_date?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_rates_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
