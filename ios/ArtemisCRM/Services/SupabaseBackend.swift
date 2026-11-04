@@ -108,6 +108,10 @@ final class SupabaseBackend: Backend {
         try await client.from("clients").insert(input).select().single().execute().value
     }
 
+    func updateClient(id: String, _ update: ClientUpdate) async throws -> Client {
+        try await client.from("clients").update(update).eq("id", value: id).select().single().execute().value
+    }
+
     func deleteBooking(id: String) async throws {
         try await client.from("bookings").delete().eq("id", value: id).execute()
     }
@@ -163,6 +167,13 @@ final class SupabaseBackend: Backend {
     func createRate(_ input: RateInput) async throws -> VehicleRate {
         do {
             return try await client.from("vehicle_rates").insert(input).select().single().execute().value
+        } catch { throw Self.rateError(error) }
+    }
+
+    func createRates(_ inputs: [RateInput]) async throws -> [VehicleRate] {
+        guard !inputs.isEmpty else { return [] }
+        do {
+            return try await client.from("vehicle_rates").insert(inputs).select().execute().value
         } catch { throw Self.rateError(error) }
     }
 

@@ -7,6 +7,7 @@ enum Route: Hashable {
     case booking(String)
     case request(String)
     case vehicle(String)
+    case prices(String)
     case client(String)
     case clients
     case money
@@ -322,6 +323,13 @@ final class AppStore: ObservableObject {
         show("Η κράτηση διαγράφηκε!")
     }
 
+    func updateClient(_ c: Client, _ update: ClientUpdate) async throws {
+        let saved = try await backend.updateClient(id: c.id, update)
+        if let i = clients.firstIndex(where: { $0.id == c.id }) { clients[i] = saved }
+        Haptics.notify(.success)
+        show("Το προφίλ αποθηκεύτηκε")
+    }
+
     func mergeClients(keep: Client, merge: Client) async throws {
         try await backend.mergeClients(keepID: keep.id, mergeID: merge.id)
         for i in bookings.indices where bookings[i].clientID == merge.id { bookings[i].clientID = keep.id }
@@ -398,6 +406,32 @@ final class AppStore: ObservableObject {
             rates.append(r)
         }
         rates.sort { $0.startDate < $1.startDate }
+    }
+
+    /// insertFree() in VehicleRatesPage.tsx: rows that overlap an existing period are skipped.
+    /// Returns how many were added and how many skipped.
+    @discardableResult
+    func addRates(_ inputs: [RateInput], done: String) async -> (added: Int, skipped: Int) {
+        let existing = rates
+        let free = inputs.filter { row in
+            !existing.contains { $0.vehicleID == row.vehicleID && $0.startDate <= row.endDate && $0.endDate >= row.startDate }
+        }
+        let skipped = inputs.count - free.count
+        guard !free.isEmpty else {
+            show("Όλες οι περίοδοι υπάρχουν ήδη, δεν προστέθηκε τίποτα.")
+            return (0, skipped)
+        }
+        do {
+            rates.append(contentsOf: try await backend.createRates(free))
+            rates.sort { $0.startDate < $1.startDate }
+            Haptics.notify(.success)
+            show("\(done): \(free.count)" + (skipped > 0 ? " (παραλείφθηκαν \(skipped) που επικαλύπτονταν)" : ""))
+            return (free.count, skipped)
+        } catch {
+            Haptics.notify(.error)
+            show(error.localizedDescription, error: true)
+            return (0, inputs.count)
+        }
     }
 
     func deleteRate(_ r: VehicleRate) async {

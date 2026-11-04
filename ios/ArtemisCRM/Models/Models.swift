@@ -385,6 +385,42 @@ struct ClientInput: Encodable {
     var email: String?
 }
 
+/// save() in ClientProfilePage.tsx: every field is sent, blanks as null.
+struct ClientUpdate: Encodable, Equatable {
+    var name: String
+    var phone: String?
+    var email: String?
+    var idDocument: String?
+    var notes: String?
+    var tags: [String] = []
+    var preferredLanguage: String?
+    var preferredVehicleID: String?
+
+    init(_ c: Client) {
+        name = c.name; phone = c.phone; email = c.email; idDocument = c.idDocument; notes = c.notes
+        tags = c.tags ?? []; preferredLanguage = c.preferredLanguage; preferredVehicleID = c.preferredVehicleID
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case name, phone, email, notes, tags
+        case idDocument = "id_document"
+        case preferredLanguage = "preferred_language"
+        case preferredVehicleID = "preferred_vehicle_id"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(name.trimmed, forKey: .name)
+        try c.encode(phone.nilIfBlank, forKey: .phone)
+        try c.encode(email.nilIfBlank, forKey: .email)
+        try c.encode(idDocument.nilIfBlank, forKey: .idDocument)
+        try c.encode(notes.nilIfBlank, forKey: .notes)
+        try c.encode(tags.map(\.trimmed).filter { !$0.isEmpty }, forKey: .tags)
+        try c.encode(preferredLanguage.nilIfBlank, forKey: .preferredLanguage)
+        try c.encode(preferredVehicleID.nilIfBlank, forKey: .preferredVehicleID)
+    }
+}
+
 struct RateInput: Encodable, Equatable {
     var vehicleID: String
     var label: String?

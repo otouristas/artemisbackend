@@ -94,7 +94,9 @@ struct MainTabView: View {
             case "today": router.tab = .today
             case "fleet": router.tab = .fleet
                 // fleet/detail, fleet/maintenance, fleet/block, fleet/edit open the first model; fleet/new and fleet/units the form.
-                if parts.count > 1, !["new", "units"].contains(parts[1]), let v = store.vehicles.first { router.fleetPath = [.vehicle(v.id)] }
+                if parts.count > 1, !["new", "units"].contains(parts[1]), let v = store.vehicles.first {
+                    router.fleetPath = parts[1] == "prices" ? [.vehicle(v.id), .prices(v.id)] : [.vehicle(v.id)]
+                }
             case "more": router.tab = .more
                 if parts.count > 1 {
                     switch parts[1] {
@@ -118,6 +120,7 @@ extension View {
             case .booking(let id): BookingDetailView(bookingID: id)
             case .request(let id): RequestDetailView(requestID: id)
             case .vehicle(let id): VehicleDetailView(vehicleID: id)
+            case .prices(let id): PriceCalendarView(vehicleID: id)
             case .client(let id): ClientDetailView(clientID: id)
             case .clients: ClientsView()
             case .money: MoneyView()

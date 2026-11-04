@@ -121,6 +121,7 @@ protocol Backend: AnyObject {
     func setBookingStatus(id: String, _ status: BookingStatus) async throws
     func updateRequest(id: String, _ update: RequestStatusUpdate) async throws
     func createClient(_ input: ClientInput) async throws -> Client
+    func updateClient(id: String, _ update: ClientUpdate) async throws -> Client
 
     func deleteBooking(id: String) async throws
     /// useMergeClients(): move the duplicate's bookings to `keepID`, then delete the duplicate.
@@ -137,6 +138,8 @@ protocol Backend: AnyObject {
     func deleteBlock(id: String) async throws
 
     func createRate(_ input: RateInput) async throws -> VehicleRate
+    /// One insert for many periods (fill months, copy a year). The caller drops overlapping rows first.
+    func createRates(_ inputs: [RateInput]) async throws -> [VehicleRate]
     func updateRate(id: String, _ input: RateInput) async throws
     func deleteRate(id: String) async throws
 

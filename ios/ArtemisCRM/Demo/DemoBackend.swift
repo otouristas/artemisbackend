@@ -62,6 +62,20 @@ final class DemoBackend: Backend {
         return c
     }
 
+    func updateClient(id: String, _ update: ClientUpdate) async throws -> Client {
+        await latency()
+        guard let i = data.clients.firstIndex(where: { $0.id == id }) else { throw BackendError.message("Ο πελάτης δεν βρέθηκε") }
+        data.clients[i].name = update.name.trimmed
+        data.clients[i].phone = update.phone.nilIfBlank
+        data.clients[i].email = update.email.nilIfBlank
+        data.clients[i].idDocument = update.idDocument.nilIfBlank
+        data.clients[i].notes = update.notes.nilIfBlank
+        data.clients[i].tags = update.tags.map(\.trimmed).filter { !$0.isEmpty }
+        data.clients[i].preferredLanguage = update.preferredLanguage.nilIfBlank
+        data.clients[i].preferredVehicleID = update.preferredVehicleID.nilIfBlank
+        return data.clients[i]
+    }
+
     func deleteBooking(id: String) async throws {
         await latency()
         data.bookings.removeAll { $0.id == id }
@@ -137,6 +151,17 @@ final class DemoBackend: Backend {
         data.rates.append(r)
         data.rates.sort { $0.startDate < $1.startDate }
         return r
+    }
+
+    func createRates(_ inputs: [RateInput]) async throws -> [VehicleRate] {
+        await latency()
+        let made = inputs.map { input in
+            VehicleRate(id: UUID().uuidString.lowercased(), vehicleID: input.vehicleID, label: input.label, startDate: input.startDate,
+                        endDate: input.endDate, dailyRate: input.dailyRate, minDays: input.minDays)
+        }
+        data.rates.append(contentsOf: made)
+        data.rates.sort { $0.startDate < $1.startDate }
+        return made
     }
 
     func updateRate(id: String, _ input: RateInput) async throws {

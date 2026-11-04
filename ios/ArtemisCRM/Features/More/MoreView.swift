@@ -136,6 +136,7 @@ struct ClientDetailView: View {
     @EnvironmentObject private var store: AppStore
     let clientID: String
     @State private var newBooking = false
+    @State private var editing = false
     @State private var mergeID: String?
     @State private var confirmMerge = false
     @State private var merging = false
@@ -168,12 +169,15 @@ struct ClientDetailView: View {
                 }
                 let duplicates = store.duplicates(of: c)
                 if !duplicates.isEmpty { mergeSection(c, duplicates) }
-                Section("Στοιχεία") {
-                    if let p = c.phone { InfoRow(icon: "phone", title: "Τηλέφωνο", value: p) }
-                    if let e = c.email { InfoRow(icon: "envelope", title: "Email", value: e) }
-                    if let l = c.preferredLanguage { InfoRow(icon: "globe", title: "Γλώσσα", value: Locale(identifier: "el").localizedString(forLanguageCode: l) ?? l) }
+                Section {
+                    if let p = c.phone.nilIfBlank { InfoRow(icon: "phone", title: "Τηλέφωνο", value: p) }
+                    if let e = c.email.nilIfBlank { InfoRow(icon: "envelope", title: "Email", value: e) }
+                    if let d = c.idDocument.nilIfBlank { InfoRow(icon: "person.text.rectangle", title: "Ταυτότητα", value: d) }
+                    if let l = ClientEditView.languageLabel(c.preferredLanguage) { InfoRow(icon: "globe", title: "Γλώσσα", value: l) }
+                    if let v = store.vehicle(c.preferredVehicleID) { InfoRow(icon: "car.side", title: "Προτιμώμενο όχημα", value: v.name) }
                     if let n = c.notes?.nilIfBlank { Text(n).font(.subheadline) }
-                }
+                    Button { editing = true } label: { Label("Επεξεργασία στοιχείων", systemImage: "pencil") }
+                } header: { Text("Στοιχεία") }
                 Section("Ιστορικό") {
                     if history.isEmpty { Text("Καμία κράτηση").foregroundStyle(.secondary) }
                     ForEach(history) { b in
@@ -198,11 +202,17 @@ struct ClientDetailView: View {
             .navigationTitle(c.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                Button { editing = true } label: { Text("Επεξεργασία") }
                 Button { newBooking = true } label: { Image(systemName: "calendar.badge.plus") }
                     .accessibilityLabel("Νέα κράτηση για τον πελάτη")
             }
+            .sheet(isPresented: $editing) { ClientEditView(client: c) }
             .task {
                 #if DEBUG
+                if AppConfig.demoRoute == "more/client/edit" {
+                    try? await Task.sleep(nanoseconds: 1_200_000_000)
+                    editing = true
+                }
                 if AppConfig.demoRoute == "more/client/merge", let d = store.duplicates(of: c).first {
                     try? await Task.sleep(nanoseconds: 1_600_000_000)
                     mergeID = d.id

@@ -115,6 +115,14 @@ struct VehicleDetailView: View {
                             Button(role: .destructive) { Task { await store.deleteRate(r) } } label: { Label("Διαγραφή", systemImage: "trash") }
                         }
                 }
+                NavigationLink(value: Route.prices(v.id)) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Ημερολόγιο τιμών \(String(PriceYear.currentYear))", systemImage: "calendar")
+                            .font(.subheadline.weight(.semibold))
+                        YearPriceStrip(rates: store.rates(for: v.id), year: PriceYear.currentYear, compact: true)
+                    }
+                    .padding(.vertical, 4)
+                }
                 Button { editingRate = RateSheet(rate: nil) } label: { Label("Νέα περίοδος τιμής", systemImage: "plus.circle.fill") }
             } header: { Text("Τιμές ανά περίοδο") } footer: {
                 Text("Η τιμή υπολογίζεται ανά νύχτα από αυτές τις περιόδους (ίδιος κανόνας με το web και το site).")
@@ -149,6 +157,7 @@ struct VehicleDetailView: View {
                     Button { addingUnits = true } label: { Label("Προσθήκη μονάδων", systemImage: "plus.square.on.square") }
                     Button { addingBlock = true } label: { Label("Μπλοκ συντήρησης", systemImage: "wrench.and.screwdriver") }
                     Button { editingRate = RateSheet(rate: nil) } label: { Label("Νέα περίοδος τιμής", systemImage: "eurosign.circle") }
+                    NavigationLink(value: Route.prices(v.id)) { Label("Ημερολόγιο τιμών", systemImage: "calendar") }
                 } label: { Text("Επεξεργασία") }
             }
         }
@@ -263,6 +272,9 @@ struct RateEditView: View {
     @Environment(\.dismiss) private var dismiss
     let vehicle: Vehicle
     let rate: VehicleRate?
+    /// A range picked on the price calendar.
+    var initialStart: String? = nil
+    var initialEnd: String? = nil
 
     @State private var label = ""
     @State private var start = Date()
@@ -271,6 +283,7 @@ struct RateEditView: View {
     @State private var minDays = 1
     @State private var saving = false
     @State private var error: String?
+    @State private var confirmDelete = false
 
     var body: some View {
         NavigationStack {
@@ -293,8 +306,22 @@ struct RateEditView: View {
                     Text("Οι περίοδοι του ίδιου μοντέλου δεν μπορούν να επικαλύπτονται.")
                 }
                 if let error { Section { Text(error).foregroundStyle(Color.danger) } }
+                if rate != nil {
+                    Section {
+                        Button("Διαγραφή περιόδου", role: .destructive) { confirmDelete = true }
+                    }
+                }
             }
             .navigationTitle(rate == nil ? "Νέα περίοδος" : "Επεξεργασία τιμής")
+            .alert("Διαγραφή περιόδου;", isPresented: $confirmDelete) {
+                Button("Διαγραφή", role: .destructive) {
+                    guard let rate else { return }
+                    Task { await store.deleteRate(rate); dismiss() }
+                }
+                Button("Άκυρο", role: .cancel) {}
+            } message: {
+                Text("Οι ημέρες της θα μείνουν χωρίς τιμή μέχρι να προσθέσετε νέα περίοδο.")
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Άκυρο") { dismiss() } }
@@ -303,7 +330,11 @@ struct RateEditView: View {
                 }
             }
             .onAppear {
-                guard let rate else { return }
+                guard let rate else {
+                    if let initialStart { start = Day.date(initialStart) }
+                    if let initialEnd { end = Day.date(initialEnd) }
+                    return
+                }
                 label = rate.label ?? ""
                 start = Day.date(rate.startDate); end = Day.date(rate.endDate)
                 daily = rate.dailyRate; minDays = rate.minDays ?? 1
